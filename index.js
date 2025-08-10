@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, SlashCommandBuilder, REST, Routes, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
+const { Client, GatewayIntentBits, SlashCommandBuilder, REST, Routes, EmbedBuilder, PermissionFlagsBits, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = require('discord.js');
 require('dotenv').config();
 
 // Konfiguracja bota
@@ -10,6 +10,50 @@ const config = {
     welcomeMessage: {
         title: '🇺🇸 Hello! {user} on the Stable of Souls server! 👋',
         description: 'We are thrilled to have you join us! To get started, please read the rules ✅ ▶ <#1241676404605583401> and verify yourself in the right channel to gain full access to the server.'
+    if (interaction.commandName === 'embed') {
+        console.log(`📢 DEBUG: Użytkownik ${interaction.user.tag} użył komendy /embed`);
+        
+        try {
+            // Sprawdzenie uprawnień administratora
+            if (!interaction.member.permissions.has('Administrator')) {
+                await interaction.reply({
+                    content: '❌ Potrzebujesz uprawnień administratora do użycia tej komendy.',
+                    ephemeral: true
+                });
+                return;
+            }
+            
+            // Stwórz modal z wieloliniowym polem tekstowym
+            const modal = new ModalBuilder()
+                .setCustomId('embed_modal')
+                .setTitle('Wyślij ogłoszenie jako bot');
+            
+            const messageInput = new TextInputBuilder()
+                .setCustomId('message_content')
+                .setLabel('Treść wiadomości')
+                .setStyle(TextInputStyle.Paragraph) // Wieloliniowe
+                .setPlaceholder('Wpisz treść ogłoszenia...\n\nMożesz używać enterów i formatowania Discord')
+                .setRequired(true)
+                .setMaxLength(2000);
+            
+            const row = new ActionRowBuilder().addComponents(messageInput);
+            modal.addComponents(row);
+            
+            // Pokaż modal
+            await interaction.showModal(modal);
+            
+            console.log(`📢 Pokazano modal dla ${interaction.user.tag}`);
+            
+        } catch (error) {
+            console.error('❌ Błąd przy pokazywaniu modala:', error);
+            
+            if (!interaction.replied && !interaction.deferred) {
+                await interaction.reply({
+                    content: '❌ Wystąpił błąd podczas otwierania formularza.',
+                    ephemeral: true
+                });
+            }
+        }
     }
 };
 
@@ -59,11 +103,6 @@ const commands = [
         .setName('embed')
         .setDescription('Wyślij ogłoszenie jako bot (Admin only)')
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
-        .addStringOption(option =>
-            option.setName('wiadomosc')
-                .setDescription('Treść wiadomości do wysłania')
-                .setRequired(true)
-        )
 ];
 
 // Funkcja wysyłająca przypomnienie weryfikacji
@@ -349,7 +388,8 @@ const sosCommandCooldown = new Set(); // Specjalny cooldown dla komendy SOS
 
 // Obsługa komend slash
 client.on('interactionCreate', async interaction => {
-    if (!interaction.isChatInputCommand()) return;
+    // Obsługa slash commands
+    if (interaction.isChatInputCommand()) {
     
     // DEBUGGING KAŻDEJ INTERAKCJI
     console.log(`🎯 DEBUG INTERAKCJA: ${interaction.user.tag} użył komendy /${interaction.commandName}`);
@@ -692,6 +732,57 @@ client.on('interactionCreate', async interaction => {
                     content: errorMessage,
                     ephemeral: true
                 });
+            }
+        }
+    }
+    
+    // Obsługa modal submit
+    if (interaction.isModalSubmit()) {
+        if (interaction.customId === 'embed_modal') {
+            console.log(`📢 DEBUG: Otrzymano modal od ${interaction.user.tag}`);
+            
+            try {
+                const messageContent = interaction.fields.getTextInputValue('message_content');
+                console.log(`📝 DEBUG: Treść z modala: ${messageContent}`);
+                
+                // Sprawdź czy bot ma uprawnienia do wysyłania wiadomości
+                if (!interaction.channel.permissionsFor(interaction.guild.members.me).has('SendMessages')) {
+                    await interaction.reply({
+                        content: '❌ Bot nie ma uprawnień do wysyłania wiadomości na tym kanale.',
+                        ephemeral: true
+                    });
+                    return;
+                }
+                
+                // Odpowiedz na modal
+                await interaction.reply({
+                    content: '✅ Wysyłam ogłoszenie...',
+                    ephemeral: true
+                });
+                
+                // Wyślij wiadomość jako bot
+                await interaction.channel.send(messageContent);
+                
+                // Edytuj odpowiedź
+                await interaction.editReply({
+                    content: '✅ Ogłoszenie zostało wysłane!'
+                });
+                
+                console.log(`📢 ${interaction.user.tag} wysłał ogłoszenie na kanale ${interaction.channel.name}`);
+                
+            } catch (error) {
+                console.error('❌ Błąd przy wysyłaniu ogłoszenia z modala:', error);
+                
+                if (!interaction.replied && !interaction.deferred) {
+                    await interaction.reply({
+                        content: '❌ Wystąpił błąd podczas wysyłania ogłoszenia.',
+                        ephemeral: true
+                    });
+                } else {
+                    await interaction.editReply({
+                        content: '❌ Wystąpił błąd podczas wysyłania ogłoszenia.'
+                    });
+                }
             }
         }
     }
