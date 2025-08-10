@@ -77,7 +77,7 @@ async function sendVerificationReminder(guild, isManual = false) {
             .setDescription('**Don\'t forget to verify yourself on the server!**')
             .addFields({
                 name: 'How to verify?',
-                value: '<a:4484pinkarrow:889196250828775445> Use `/verify` command\n\n`/verify sso_name:Luca Wolfblanket nickname:Kumi`\n\n⚠️ **Note:** Write it exactly as shown in the example image. Where there are spaces, there must be spaces. Where there are no spaces, don\'t add spaces.',
+                value: '<a:4484pinkarrow:889196250828775445> Use `/verify` command',
                 inline: false
             })
             .setImage('https://cdn.discordapp.com/attachments/1241719228319404043/1404163504604446750/image.png?ex=689a30ab&is=6898df2b&hm=d583daebfcc2b81462639efc65af3aa62999826c4b7004e6101aad1208e8d8f7&')
