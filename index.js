@@ -88,10 +88,17 @@ async function registerCommands() {
         const rest = new REST({ version: '10' }).setToken(config.token);
         const guildId = '845651993770721300'; // ID serwera Stable of Souls
         
-        console.log('🔄 Rejestrowanie komend slash...');
+        console.log('🔄 Czyszczenie starych komend...');
+        
+        // WYCZYŚĆ WSZYSTKIE STARE KOMENDY (globalne i per serwer)
+        await rest.put(Routes.applicationCommands(client.user.id), { body: [] });
+        await rest.put(Routes.applicationGuildCommands(client.user.id, guildId), { body: [] });
+        
+        console.log('✅ Wyczyszczono stare komendy');
+        console.log('🔄 Rejestrowanie nowych komend...');
         console.log('📋 Komendy do rejestracji:', commands.map(cmd => cmd.name).join(', '));
         
-        // REJESTRACJA PER SERWER - działa natychmiast (zamiast globalnej)
+        // REJESTRACJA TYLKO PER SERWER
         await rest.put(
             Routes.applicationGuildCommands(client.user.id, guildId),
             { body: commands },
