@@ -10,13 +10,13 @@ const config = {
     welcomeMessage: {
         title: '🇺🇸 Hello! {user} on the Stable of Souls server! 👋',
         description: 'We are thrilled to have you join us! To get started, please read the rules ✅ ▶ <#1241676404605583401> and verify yourself in the right channel to gain full access to the server.'
-    if (interaction.commandName === 'embed') {
-        console.log(`📢 DEBUG: Użytkownik ${interaction.user.tag} użył komendy /embed`);
+    if (interaction.commandName === 'wiadomosc') {
+        console.log(`📢 DEBUG: Użytkownik ${interaction.user.tag} użył komendy /wiadomosc`);
         
         try {
             // Stwórz modal z wieloliniowym polem tekstowym
             const modal = new ModalBuilder()
-                .setCustomId('embed_modal')
+                .setCustomId('wiadomosc_modal')
                 .setTitle('Wyślij ogłoszenie jako bot');
             
             const messageInput = new TextInputBuilder()
@@ -91,7 +91,7 @@ const commands = [
         .setDescription('Send a manual verification reminder (Admin only)')
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
     new SlashCommandBuilder()
-        .setName('embed')
+        .setName('wiadomosc')
         .setDescription('Wyślij ogłoszenie jako bot')
 ];
 
@@ -728,7 +728,7 @@ client.on('interactionCreate', async interaction => {
     
     // Obsługa modal submit
     if (interaction.isModalSubmit()) {
-        if (interaction.customId === 'embed_modal') {
+        if (interaction.customId === 'wiadomosc_modal') {
             console.log(`📢 DEBUG: Otrzymano modal od ${interaction.user.tag}`);
             
             try {
