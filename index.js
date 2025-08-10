@@ -54,7 +54,16 @@ const commands = [
     new SlashCommandBuilder()
         .setName('sos')
         .setDescription('Send a manual verification reminder (Admin only)')
+        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
+    new SlashCommandBuilder()
+        .setName('embed')
+        .setDescription('Wyślij ogłoszenie jako bot (Admin only)')
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
+        .addStringOption(option =>
+            option.setName('wiadomosc')
+                .setDescription('Treść wiadomości do wysłania')
+                .setRequired(true)
+        )
 ];
 
 // Funkcja wysyłająca przypomnienie weryfikacji
