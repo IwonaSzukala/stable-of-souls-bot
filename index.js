@@ -7,7 +7,7 @@ const config = {
     welcomeChannelId: process.env.WELCOME_CHANNEL_ID,
     welcomeMessage: {
         title: '🇺🇸 Hello! {user} on the Stable of Souls server! 👋',
-        description: 'We are thrilled to have you join us! To get started, please read the rules ✅ ▶ <#1241676404605583401> and verify yourself in the right channel to gain full access to the server.'
+        description: 'We are thrilled to have you join us! To get started, please read the rules ✅  <#1241676404605583401> and verify yourself in the right channel to gain full access to the server.'
     }
 };
 
@@ -91,7 +91,6 @@ client.on('interactionCreate', async interaction => {
                 
                 // Wysłanie testowej wiadomości
                 await welcomeChannel.send({ 
-                    content: `**[TEST]**`,
                     embeds: [welcomeEmbed] 
                 });
                 
