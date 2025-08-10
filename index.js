@@ -60,7 +60,13 @@ async function sendVerificationReminder(guild, isManual = false) {
         
         const reminderEmbed = new EmbedBuilder()
             .setColor('#ED4A7B') // Różowy kolor
-            .setDescription('<:comet3:1263460501279604766> Daily Verification Reminder\nDon\'t forget to verify yourself on the server!\nUse the `/verify` command');
+            .setTitle('<:comet3:1263460501279604766> Daily Verification Reminder')
+            .setDescription('**Don\'t forget to verify yourself on the server!**')
+            .addFields({
+                name: '\u200B',
+                value: '*Use `/verify` command*\n\nExample: `/verify sso_name:Luca Wolfblanket nickname:Kumi`',
+                inline: false
+            });
         
         await channel.send({
             content: `<@&${config.unverifiedRoleId}> 👋`,
