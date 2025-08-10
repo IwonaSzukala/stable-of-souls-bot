@@ -232,6 +232,12 @@ client.on('interactionCreate', async interaction => {
         console.log(`🎯 DEBUG: Użytkownik ${interaction.user.tag} użył komendy /sos`);
         console.log(`🎯 DEBUG: Interaction ID: ${interaction.id}`);
         
+        // WCZEŚNIEJSZE sprawdzenie czy już odpowiedział
+        if (interaction.replied || interaction.deferred) {
+            console.log(`⚠️ DEBUG: Interakcja już została przetworzona - pomijam`);
+            return;
+        }
+        
         try {
             // Sprawdzenie czy użytkownik ma uprawnienia administratora
             if (!interaction.member.permissions.has('Administrator')) {
@@ -249,6 +255,12 @@ client.on('interactionCreate', async interaction => {
             const success = await sendVerificationReminder(interaction.guild, true);
             
             console.log(`📥 DEBUG: Przypomnienie wysłane, sukces: ${success}`);
+            
+            // Sprawdź ponownie przed odpowiedzią
+            if (interaction.replied || interaction.deferred) {
+                console.log(`⚠️ DEBUG: Interakcja została przetworzona podczas wysyłania - pomijam odpowiedź`);
+                return;
+            }
             
             if (success) {
                 console.log(`✅ DEBUG: Odpowiadam na interakcję...`);
@@ -269,10 +281,14 @@ client.on('interactionCreate', async interaction => {
             
             // Sprawdź czy już nie odpowiedział
             if (!interaction.replied && !interaction.deferred) {
-                await interaction.reply({
-                    content: '❌ An error occurred while sending the reminder.',
-                    ephemeral: true
-                });
+                try {
+                    await interaction.reply({
+                        content: '❌ An error occurred while sending the reminder.',
+                        ephemeral: true
+                    });
+                } catch (replyError) {
+                    console.error('❌ Błąd przy odpowiedzi:', replyError);
+                }
             }
         }
     }
