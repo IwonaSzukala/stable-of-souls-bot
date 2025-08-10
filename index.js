@@ -1,4 +1,53 @@
-const { Client, GatewayIntentBits, SlashCommandBuilder, REST, Routes, EmbedBuilder } = require('discord.js');
+// Funkcja wysyłająca przypomnienie weryfikacji
+async function sendVerificationReminder(guild, isManual = false) {
+    const reminderChannelId = '1241675864362586192';
+    const unverifiedRoleId = '1245065409040748644';
+    
+    try {
+        const channel = guild.channels.cache.get(reminderChannelId);
+        
+        if (!channel) {
+            console.log('❌ Nie znaleziono kanału przypomnień weryfikacji');
+            return false;
+        }
+        
+        const reminderEmbed = new EmbedBuilder()
+            .setColor('#ED4A7B') // Różowy kolor
+            .setTitle('📝 Daily Verification Reminder')
+            .setDescription('**Don\'t forget to verify yourself on the server!**')
+            .addFields(
+                {
+                    name: '🎯 How to verify:',
+                    value: '1. Use the `/verify` command\n2. Enter your **SSO Name** (character name from game)\n3. Enter your **Nickname**\n4. Done! You\'ll get verified roles automatically',
+                    inline: false
+                },
+                {
+                    name: '✨ Example:',
+                    value: '`/verify SSO Name: Luca Wolfblanket Nickname: Kumi`\nResult: `✧ Luca Wolfblanket ✧ Kumi`',
+                    inline: false
+                },
+                {
+                    name: '❓ Need help?',
+                    value: 'Contact server administrators or check the rules channel',
+                    inline: false
+                }
+            )
+            .setFooter({ text: isManual ? 'Stable Of Souls • Manual Reminder' : 'Stable Of Souls • Daily Reminder' })
+            .setTimestamp();
+        
+        await channel.send({
+            content: `<@&${unverifiedRoleId}> 👋`,
+            embeds: [reminderEmbed]
+        });
+        
+        console.log(`📨 Wysłano ${isManual ? 'manualne' : 'automatyczne'} przypomnienie o weryfikacji`);
+        return true;
+        
+    } catch (error) {
+        console.error('❌ Błąd wysyłania przypomnienia weryfikacji:', error);
+        return false;
+    }
+}const { Client, GatewayIntentBits, SlashCommandBuilder, REST, Routes, EmbedBuilder } = require('discord.js');
 require('dotenv').config();
 
 // Konfiguracja bota
@@ -31,14 +80,14 @@ const commands = [
         ),
     new SlashCommandBuilder()
         .setName('verify')
-        .setDescription('Zweryfikuj się na serwerze')
+        .setDescription('Verify yourself on the server')
         .addStringOption(option =>
             option.setName('sso_name')
-                .setDescription('Imię postaci z gry (np. Luca Wolfblanket)')
+                .setDescription('Your character name from the game (e.g. Luca Wolfblanket)')
                 .setRequired(true))
         .addStringOption(option =>
-            option.setName('server_nickname')
-                .setDescription('Twój pseudonim (np. Kumi)')
+            option.setName('nickname')
+                .setDescription('Your nickname (e.g. Kumi)')
                 .setRequired(true))
 ].map(command => command.toJSON());
 
@@ -68,7 +117,40 @@ client.once('ready', async () => {
     
     // Rejestruj komendy slash
     await registerCommands();
+    
+    // Uruchom system codziennych przypomnień
+    startDailyReminders();
 });
+
+// System codziennych przypomnień weryfikacji (o 00:00)
+function startDailyReminders() {
+    const scheduleNextReminder = () => {
+        const now = new Date();
+        const tomorrow = new Date(now);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        tomorrow.setHours(0, 0, 0, 0); // Ustaw na 00:00:00
+        
+        const timeUntilMidnight = tomorrow.getTime() - now.getTime();
+        
+        setTimeout(async () => {
+            // Wysłanie przypomnienia o 00:00
+            const guild = client.guilds.cache.first(); // Pierwszy serwer (twój serwer)
+            if (guild) {
+                await sendVerificationReminder(guild, false);
+            }
+            
+            // Zaplanuj następne przypomnienie
+            scheduleNextReminder();
+            
+        }, timeUntilMidnight);
+        
+        const hoursUntil = Math.round(timeUntilMidnight / 1000 / 60 / 60);
+        console.log(`⏰ Następne przypomnienie weryfikacji za: ${hoursUntil} godzin (o 00:00)`);
+    };
+    
+    // Zaplanuj pierwsze przypomnienie
+    scheduleNextReminder();
+}
 
 // Obsługa komend slash
 client.on('interactionCreate', async interaction => {
@@ -122,13 +204,48 @@ client.on('interactionCreate', async interaction => {
         }
     }
 
+    if (interaction.commandName === 'reminder') {
+        try {
+            // Sprawdzenie czy użytkownik ma uprawnienia administratora
+            if (!interaction.member.permissions.has('Administrator')) {
+                await interaction.reply({
+                    content: '❌ You need Administrator permissions to use this command.',
+                    ephemeral: true
+                });
+                return;
+            }
+            
+            // Wysłanie manualnego przypomnienia
+            const success = await sendVerificationReminder(interaction.guild, true);
+            
+            if (success) {
+                await interaction.reply({
+                    content: '✅ Verification reminder sent successfully!',
+                    ephemeral: true
+                });
+            } else {
+                await interaction.reply({
+                    content: '❌ Failed to send verification reminder. Check bot permissions.',
+                    ephemeral: true
+                });
+            }
+            
+        } catch (error) {
+            console.error('❌ Błąd przy wysyłaniu manualnego przypomnienia:', error);
+            await interaction.reply({
+                content: '❌ An error occurred while sending the reminder.',
+                ephemeral: true
+            });
+        }
+    }
+
     if (interaction.commandName === 'verify') {
         try {
             const ssoName = interaction.options.getString('sso_name');
-            const serverNickname = interaction.options.getString('server_nickname');
+            const nickname = interaction.options.getString('nickname');
             
-            // Tworzenie nowego nicku w formacie ✧ SSO Name ✧ Server Nickname
-            const newNickname = `✧ ${ssoName} ✧ ${serverNickname}`;
+            // Tworzenie nowego nicku w formacie ✧ SSO Name ✧ Nickname
+            const newNickname = `✧ ${ssoName} ✧ ${nickname}`;
             
             // ID ról do dodania i usunięcia
             const rolesToAdd = ['1241706227051008061', '1105549622056861898'];
@@ -138,7 +255,7 @@ client.on('interactionCreate', async interaction => {
             // Sprawdzenie czy nick nie jest za długi (maksymalnie 32 znaki)
             if (newNickname.length > 32) {
                 await interaction.reply({
-                    content: '❌ Nick jest za długi! Maksymalnie 32 znaki. Spróbuj skrócić imię postaci lub pseudonim.',
+                    content: '❌ Nickname is too long! Maximum 32 characters. Try shortening your character name or nickname.',
                     ephemeral: true
                 });
                 return;
@@ -159,7 +276,7 @@ client.on('interactionCreate', async interaction => {
             // Sprawdzenie czy użytkownik to właściciel serwera
             if (member.id === interaction.guild.ownerId) {
                 await interaction.reply({
-                    content: '❌ Nie mogę zmienić nicku właściciela serwera. Zmień nick ręcznie lub użyj konta które nie jest właścicielem serwera.',
+                    content: '❌ Cannot change the server owner\'s nickname. Please change your nickname manually or use an account that is not the server owner.',
                     ephemeral: true
                 });
                 return;
@@ -168,7 +285,7 @@ client.on('interactionCreate', async interaction => {
             // Sprawdzenie czy bot może zarządzać tym użytkownikiem
             if (!member.manageable) {
                 await interaction.reply({
-                    content: '❌ Nie mogę zarządzać Twoimi rolami. Prawdopodobnie masz wyższą rolę niż bot. Skontaktuj się z administratorem.',
+                    content: '❌ Cannot manage your roles. You probably have a higher role than the bot. Please contact an administrator.',
                     ephemeral: true
                 });
                 return;
@@ -185,7 +302,7 @@ client.on('interactionCreate', async interaction => {
             } catch (nickError) {
                 console.log(`❌ Błąd zmiany nicku:`, nickError);
                 await interaction.reply({
-                    content: '❌ Nie mogę zmienić Twojego nicku. Sprawdź uprawnienia bota.',
+                    content: '❌ Cannot change your nickname. Please check bot permissions.',
                     ephemeral: true
                 });
                 return;
@@ -238,11 +355,11 @@ client.on('interactionCreate', async interaction => {
             // Wiadomość o pomyślnej weryfikacji
             const verificationEmbed = new EmbedBuilder()
                 .setColor('#00FF00') // Zielony kolor dla sukcesu
-                .setTitle('✅ Weryfikacja zakończona pomyślnie!')
-                .setDescription(`**Zweryfikowano jako:** ${newNickname}`)
+                .setTitle('✅ Verification completed successfully!')
+                .setDescription(`**Verified as:** ${newNickname}`)
                 .addFields({
-                    name: '📝 Potrzebujesz zmiany nicku?',
-                    value: `Napisz na kanał <#${changeNickChannelId}>`,
+                    name: '📝 Need a nickname change?',
+                    value: `Write on channel <#${changeNickChannelId}>`,
                     inline: false
                 })
                 .setTimestamp();
@@ -252,18 +369,16 @@ client.on('interactionCreate', async interaction => {
                 ephemeral: true
             });
             
-            // Usuwanie wiadomości użytkownika (jeśli to możliwe)
+            // Usuwanie wiadomości użytkownika po 15 sekundach
             try {
                 if (interaction.channel && interaction.channel.permissionsFor(interaction.guild.members.me).has('ManageMessages')) {
-                    // Dla slash commands nie ma co usuwać, bo nie ma wiadomości użytkownika
-                    // Ale możemy usunąć odpowiedź bota po czasie
                     setTimeout(async () => {
                         try {
                             await interaction.deleteReply();
                         } catch (err) {
                             // Zignoruj błąd jeśli wiadomość już została usunięta
                         }
-                    }, 10000); // Usuń po 10 sekundach
+                    }, 15000); // Usuń po 15 sekundach
                 }
             } catch (error) {
                 // Zignoruj błędy związane z usuwaniem wiadomości
@@ -277,10 +392,10 @@ client.on('interactionCreate', async interaction => {
         } catch (error) {
             console.error('❌ Błąd przy weryfikacji:', error);
             
-            let errorMessage = '❌ Wystąpił błąd podczas weryfikacji.';
+            let errorMessage = '❌ An error occurred during verification.';
             
             if (error.code === 50013) {
-                errorMessage = '❌ Bot nie ma uprawnień do zmiany Twojego nicku lub ról. Skontaktuj się z administratorem.';
+                errorMessage = '❌ Bot does not have permission to change your nickname or roles. Please contact an administrator.';
             }
             
             await interaction.reply({
