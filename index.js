@@ -399,15 +399,10 @@ client.on('interactionCreate', async interaction => {
                     return;
                 }
 
-                // Przygotowanie testowej wiadomości powitalnej
+                // Przygotowanie wiadomości powitalnej
                 const welcomeEmbed = new EmbedBuilder()
-                    .setDescription(config.welcomeMessage.title.replace('{user}', `<@${interaction.user.id}>`))
-                    .addFields({
-                        name: '\u200B',
-                        value: config.welcomeMessage.description,
-                        inline: false
-                    })
-                    .setColor('#ED4A7B'); // Różowy kolor jak na screenie
+                    .setColor('#ED4A7B')
+                    .setDescription(`<a:3729_Little_Pretty_Star_Pink:889208329321201674> Hello {user} on the Stable of Souls server! 👋\n\nWe are thrilled to have you join us! To get started, please read the rules <#1241676404605583401> and verify yourself in the <#1241675864362586192> to gain full access to the server. <@&1270346690421976055>!`);
                 
                 // Wysłanie testowej wiadomości
                 await welcomeChannel.send({ 
@@ -706,13 +701,8 @@ client.on('guildMemberAdd', async (member) => {
 
         // Przygotowanie wiadomości powitalnej
         const welcomeEmbed = new EmbedBuilder()
-            .setDescription(config.welcomeMessage.title.replace('{user}', `<@${member.id}>`))
-            .addFields({
-                name: '\u200B',
-                value: config.welcomeMessage.description,
-                inline: false
-            })
-            .setColor('#ED4A7B'); // Różowy kolor jak na screenie
+            .setColor('#ED4A7B')
+            .setDescription(`<a:3729_Little_Pretty_Star_Pink:889208329321201674> Hello <@${member.id}> on the Stable of Souls server! 👋\n\nWe are thrilled to have you join us! To get started, please read the rules <#1241676404605583401> and verify yourself in the <#1241675864362586192> to gain full access to the server. <@&1270346690421976055>!`);
         
         // Wysłanie wiadomości powitalnej
         await welcomeChannel.send({ embeds: [welcomeEmbed] });
