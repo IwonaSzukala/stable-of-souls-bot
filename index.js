@@ -10,41 +10,6 @@ const config = {
     welcomeMessage: {
         title: '🇺🇸 Hello! {user} on the Stable of Souls server! 👋',
         description: 'We are thrilled to have you join us! To get started, please read the rules ✅ ▶ <#1241676404605583401> and verify yourself in the right channel to gain full access to the server.'
-    if (interaction.commandName === 'wiadomosc') {
-        console.log(`📢 DEBUG: Użytkownik ${interaction.user.tag} użył komendy /wiadomosc`);
-        
-        try {
-            // Stwórz modal z wieloliniowym polem tekstowym
-            const modal = new ModalBuilder()
-                .setCustomId('wiadomosc_modal')
-                .setTitle('Wyślij ogłoszenie jako bot');
-            
-            const messageInput = new TextInputBuilder()
-                .setCustomId('message_content')
-                .setLabel('Treść wiadomości')
-                .setStyle(TextInputStyle.Paragraph) // Wieloliniowe
-                .setPlaceholder('Wpisz treść ogłoszenia...\n\nMożesz używać enterów i formatowania Discord')
-                .setRequired(true)
-                .setMaxLength(2000);
-            
-            const row = new ActionRowBuilder().addComponents(messageInput);
-            modal.addComponents(row);
-            
-            // Pokaż modal
-            await interaction.showModal(modal);
-            
-            console.log(`📢 Pokazano modal dla ${interaction.user.tag}`);
-            
-        } catch (error) {
-            console.error('❌ Błąd przy pokazywaniu modala:', error);
-            
-            if (!interaction.replied && !interaction.deferred) {
-                await interaction.reply({
-                    content: '❌ Wystąpił błąd podczas otwierania formularza.',
-                    ephemeral: true
-                });
-            }
-        }
     }
 };
 
@@ -375,8 +340,7 @@ const sosCommandCooldown = new Set(); // Specjalny cooldown dla komendy SOS
 
 // Obsługa komend slash
 client.on('interactionCreate', async interaction => {
-    // Obsługa slash commands
-    if (interaction.isChatInputCommand()) {
+    if (!interaction.isChatInputCommand()) return;
     
     // DEBUGGING KAŻDEJ INTERAKCJI
     console.log(`🎯 DEBUG INTERAKCJA: ${interaction.user.tag} użył komendy /${interaction.commandName}`);
@@ -719,57 +683,6 @@ client.on('interactionCreate', async interaction => {
                     content: errorMessage,
                     ephemeral: true
                 });
-            }
-        }
-    }
-    
-    // Obsługa modal submit
-    if (interaction.isModalSubmit()) {
-        if (interaction.customId === 'wiadomosc_modal') {
-            console.log(`📢 DEBUG: Otrzymano modal od ${interaction.user.tag}`);
-            
-            try {
-                const messageContent = interaction.fields.getTextInputValue('message_content');
-                console.log(`📝 DEBUG: Treść z modala: ${messageContent}`);
-                
-                // Sprawdź czy bot ma uprawnienia do wysyłania wiadomości
-                if (!interaction.channel.permissionsFor(interaction.guild.members.me).has('SendMessages')) {
-                    await interaction.reply({
-                        content: '❌ Bot nie ma uprawnień do wysyłania wiadomości na tym kanale.',
-                        ephemeral: true
-                    });
-                    return;
-                }
-                
-                // Odpowiedz na modal
-                await interaction.reply({
-                    content: '✅ Wysyłam ogłoszenie...',
-                    ephemeral: true
-                });
-                
-                // Wyślij wiadomość jako bot
-                await interaction.channel.send(messageContent);
-                
-                // Edytuj odpowiedź
-                await interaction.editReply({
-                    content: '✅ Ogłoszenie zostało wysłane!'
-                });
-                
-                console.log(`📢 ${interaction.user.tag} wysłał ogłoszenie na kanale ${interaction.channel.name}`);
-                
-            } catch (error) {
-                console.error('❌ Błąd przy wysyłaniu ogłoszenia z modala:', error);
-                
-                if (!interaction.replied && !interaction.deferred) {
-                    await interaction.reply({
-                        content: '❌ Wystąpił błąd podczas wysyłania ogłoszenia.',
-                        ephemeral: true
-                    });
-                } else {
-                    await interaction.editReply({
-                        content: '❌ Wystąpił błąd podczas wysyłania ogłoszenia.'
-                    });
-                }
             }
         }
     }
