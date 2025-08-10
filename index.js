@@ -21,7 +21,7 @@ const client = new Client({
     ]
 });
 
-// Definicja komendy slash - POPRAWIONA WERSJA
+// Definicja komendy slash - POPRAWIONA WERSJA Z DEBUGIEM
 const commands = [
     new SlashCommandBuilder()
         .setName('test')
@@ -34,8 +34,20 @@ const commands = [
         ),
     new SlashCommandBuilder()
         .setName('verify')
-        .setDescription('Verify yourself on the server (Available to everyone)')
-        // USUNIĘTO setDefaultMemberPermissions - teraz dostępne dla wszystkich
+        .setDescription('Verify yourself on the server')
+        .setDefaultMemberPermissions('0') // EXPLICIT ZERO = dostępne dla wszystkich
+        .addStringOption(option =>
+            option.setName('sso_name')
+                .setDescription('Your character name from the game (e.g. Luca Wolfblanket)')
+                .setRequired(true))
+        .addStringOption(option =>
+            option.setName('nickname')
+                .setDescription('Your nickname (e.g. Kumi)')
+                .setRequired(true)),
+    new SlashCommandBuilder()
+        .setName('verify_unverified')
+        .setDescription('Verify yourself - only for unverified users')
+        .setDefaultMemberPermissions('0') // Dostępne dla wszystkich, ale sprawdzimy rolę w kodzie
         .addStringOption(option =>
             option.setName('sso_name')
                 .setDescription('Your character name from the game (e.g. Luca Wolfblanket)')
@@ -100,24 +112,53 @@ async function registerCommands() {
         const guildId = '845651993770721300'; // ID serwera Stable of Souls
         
         console.log('🔄 Czyszczenie starych komend...');
+        console.log('🔍 DEBUG: Client user ID:', client.user.id);
+        console.log('🔍 DEBUG: Guild ID:', guildId);
         
         // WYCZYŚĆ WSZYSTKIE STARE KOMENDY (globalne i per serwer)
+        console.log('🧹 Czyszczenie komend globalnych...');
         await rest.put(Routes.applicationCommands(client.user.id), { body: [] });
+        
+        console.log('🧹 Czyszczenie komend serwera...');
         await rest.put(Routes.applicationGuildCommands(client.user.id, guildId), { body: [] });
+        
+        // Poczekaj chwilę na synchronizację Discord
+        console.log('⏳ Czekam 2 sekundy na synchronizację...');
+        await new Promise(resolve => setTimeout(resolve, 2000));
         
         console.log('✅ Wyczyszczono stare komendy');
         console.log('🔄 Rejestrowanie nowych komend...');
         console.log('📋 Komendy do rejestracji:', commands.map(cmd => cmd.name).join(', '));
         
+        // DEBUGOWANIE KAŻDEJ KOMENDY
+        commands.forEach(cmd => {
+            console.log(`🔍 DEBUG Komenda: ${cmd.name}`);
+            console.log(`🔍 DEBUG Permissions: ${cmd.default_member_permissions}`);
+            console.log(`🔍 DEBUG Description: ${cmd.description}`);
+        });
+        
         // REJESTRACJA TYLKO PER SERWER
-        await rest.put(
+        const registeredCommands = await rest.put(
             Routes.applicationGuildCommands(client.user.id, guildId),
             { body: commands },
         );
         
         console.log('✅ Komendy slash zarejestrowane dla serwera!');
+        console.log(`📊 Zarejestrowano ${registeredCommands.length} komend`);
+        
+        // DODATKOWY DEBUG - sprawdź czy komendy rzeczywiście się zarejestrowały
+        registeredCommands.forEach(cmd => {
+            console.log(`✅ Zarejestrowana komenda: ${cmd.name} (permissions: ${cmd.default_member_permissions})`);
+        });
+        
     } catch (error) {
         console.error('❌ Błąd rejestracji komend:', error);
+        if (error.code) {
+            console.error('❌ Kod błędu:', error.code);
+        }
+        if (error.message) {
+            console.error('❌ Wiadomość błędu:', error.message);
+        }
     }
 }
 
@@ -170,6 +211,12 @@ const sosCommandCooldown = new Set(); // Specjalny cooldown dla komendy SOS
 // Obsługa komend slash
 client.on('interactionCreate', async interaction => {
     if (!interaction.isChatInputCommand()) return;
+    
+    // DEBUGGING KAŻDEJ INTERAKCJI
+    console.log(`🎯 DEBUG INTERAKCJA: ${interaction.user.tag} użył komendy /${interaction.commandName}`);
+    console.log(`🎯 DEBUG: Guild: ${interaction.guild.name} (${interaction.guild.id})`);
+    console.log(`🎯 DEBUG: Channel: ${interaction.channel.name} (${interaction.channel.id})`);
+    console.log(`🎯 DEBUG: User permissions:`, interaction.member.permissions.toArray().join(', '));
     
     // Specjalne zabezpieczenie dla komendy SOS
     if (interaction.commandName === 'sos') {
@@ -320,9 +367,24 @@ client.on('interactionCreate', async interaction => {
         }
     }
 
-    if (interaction.commandName === 'verify') {
-        console.log(`🎯 DEBUG: Użytkownik ${interaction.user.tag} użył komendy /verify`);
+    if (interaction.commandName === 'verify' || interaction.commandName === 'verify_unverified') {
+        console.log(`🎯 DEBUG: Użytkownik ${interaction.user.tag} użył komendy /${interaction.commandName}`);
         console.log(`🎯 DEBUG: Czy to admin: ${interaction.member.permissions.has('Administrator')}`);
+        console.log(`🎯 DEBUG: Role użytkownika:`, interaction.member.roles.cache.map(r => `${r.name} (${r.id})`).join(', '));
+        
+        // SPRAWDZENIE CZY UŻYTKOWNIK MA ROLĘ UNVERIFIED (tylko dla verify_unverified)
+        if (interaction.commandName === 'verify_unverified') {
+            const hasUnverifiedRole = interaction.member.roles.cache.has(config.unverifiedRoleId);
+            console.log(`🔍 DEBUG: Użytkownik ma rolę unverified (${config.unverifiedRoleId}): ${hasUnverifiedRole}`);
+            
+            if (!hasUnverifiedRole) {
+                await interaction.reply({
+                    content: '❌ This command is only available for unverified users. You may already be verified or use the regular `/verify` command.',
+                    ephemeral: true
+                });
+                return;
+            }
+        }
         
         try {
             const ssoName = interaction.options.getString('sso_name');
