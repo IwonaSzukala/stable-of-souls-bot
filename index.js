@@ -6,8 +6,8 @@ const config = {
     token: process.env.BOT_TOKEN,
     welcomeChannelId: process.env.WELCOME_CHANNEL_ID,
     welcomeMessage: {
-        title: '🇺🇸 Hello! @Stable Of Souls on the Stable of Souls server! 👋',
-        description: 'We are thrilled to have you join us! To get started, please read the rules ✅ ▶ rules and verify yourself in the right channel to gain full access to the server.'
+        title: '🇺🇸 Hello! {user} on the Stable of Souls server! 👋',
+        description: 'We are thrilled to have you join us! To get started, please read the rules ✅ ▶ <#1241676404605583401> and verify yourself in the right channel to gain full access to the server.'
     }
 };
 
@@ -81,13 +81,13 @@ client.on('interactionCreate', async interaction => {
 
                 // Przygotowanie testowej wiadomości powitalnej
                 const welcomeEmbed = new EmbedBuilder()
-                    .setDescription(config.welcomeMessage.title.replace('@Stable Of Souls', `<@${interaction.user.id}>`))
+                    .setDescription(config.welcomeMessage.title.replace('{user}', `<@${interaction.user.id}>`))
                     .addFields({
                         name: '\u200B',
                         value: config.welcomeMessage.description,
                         inline: false
                     })
-                    .setColor('#5865F2'); // Discord blue color
+                    .setColor('#ED4A7B'); // Różowy kolor jak na screenie
                 
                 // Wysłanie testowej wiadomości
                 await welcomeChannel.send({ 
@@ -126,13 +126,13 @@ client.on('guildMemberAdd', async (member) => {
 
         // Przygotowanie wiadomości powitalnej
         const welcomeEmbed = new EmbedBuilder()
-            .setDescription(config.welcomeMessage.title.replace('@Stable Of Souls', `<@${member.id}>`))
+            .setDescription(config.welcomeMessage.title.replace('{user}', `<@${member.id}>`))
             .addFields({
                 name: '\u200B',
                 value: config.welcomeMessage.description,
                 inline: false
             })
-            .setColor('#5865F2'); // Discord blue color
+            .setColor('#ED4A7B'); // Różowy kolor jak na screenie
         
         // Wysłanie wiadomości powitalnej
         await welcomeChannel.send({ embeds: [welcomeEmbed] });
