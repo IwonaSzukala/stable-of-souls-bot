@@ -111,54 +111,86 @@ async function registerCommands() {
         const rest = new REST({ version: '10' }).setToken(config.token);
         const guildId = '845651993770721300'; // ID serwera Stable of Souls
         
-        console.log('🔄 Czyszczenie starych komend...');
+        console.log('🔄 Rozpoczynam rejestrację komend...');
         console.log('🔍 DEBUG: Client user ID:', client.user.id);
         console.log('🔍 DEBUG: Guild ID:', guildId);
         
-        // WYCZYŚĆ WSZYSTKIE STARE KOMENDY (globalne i per serwer)
-        console.log('🧹 Czyszczenie komend globalnych...');
+        // NAJPIERW sprawdź aktualne komendy
+        console.log('📋 Sprawdzam obecne komendy na serwerze...');
+        try {
+            const existingCommands = await rest.get(Routes.applicationGuildCommands(client.user.id, guildId));
+            console.log(`📊 Obecne komendy na serwerze: ${existingCommands.length}`);
+            existingCommands.forEach(cmd => {
+                console.log(`- ${cmd.name} (permissions: ${cmd.default_member_permissions})`);
+            });
+        } catch (checkError) {
+            console.log('⚠️ Nie można sprawdzić obecnych komend:', checkError.message);
+        }
+        
+        // USUŃ WSZYSTKIE KOMENDY (globalne i serwer)
+        console.log('🧹 Usuwam wszystkie komendy globalne...');
         await rest.put(Routes.applicationCommands(client.user.id), { body: [] });
         
-        console.log('🧹 Czyszczenie komend serwera...');
+        console.log('🧹 Usuwam wszystkie komendy serwera...');
         await rest.put(Routes.applicationGuildCommands(client.user.id, guildId), { body: [] });
         
-        // Poczekaj chwilę na synchronizację Discord
-        console.log('⏳ Czekam 2 sekundy na synchronizację...');
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        // DŁUGSZE OPÓŹNIENIE dla Render.com
+        console.log('⏳ Czekam 5 sekund na synchronizację Discord...');
+        await new Promise(resolve => setTimeout(resolve, 5000));
         
-        console.log('✅ Wyczyszczono stare komendy');
-        console.log('🔄 Rejestrowanie nowych komend...');
-        console.log('📋 Komendy do rejestracji:', commands.map(cmd => cmd.name).join(', '));
-        
-        // DEBUGOWANIE KAŻDEJ KOMENDY
-        commands.forEach(cmd => {
-            console.log(`🔍 DEBUG Komenda: ${cmd.name}`);
-            console.log(`🔍 DEBUG Permissions: ${cmd.default_member_permissions}`);
-            console.log(`🔍 DEBUG Description: ${cmd.description}`);
+        // DEBUGOWANIE KAŻDEJ KOMENDY PRZED REJESTRACJĄ
+        console.log('🔍 Komendy które będą zarejestrowane:');
+        commands.forEach((cmd, index) => {
+            console.log(`${index + 1}. ${cmd.name}`);
+            console.log(`   - Description: ${cmd.description}`);
+            console.log(`   - Permissions: ${cmd.default_member_permissions}`);
+            console.log(`   - Options: ${cmd.options ? cmd.options.length : 0}`);
         });
         
-        // REJESTRACJA TYLKO PER SERWER
+        // REJESTRACJA KOMEND
+        console.log('📝 Rejestruję nowe komendy...');
         const registeredCommands = await rest.put(
             Routes.applicationGuildCommands(client.user.id, guildId),
             { body: commands },
         );
         
-        console.log('✅ Komendy slash zarejestrowane dla serwera!');
+        console.log('✅ Komendy zarejestrowane pomyślnie!');
         console.log(`📊 Zarejestrowano ${registeredCommands.length} komend`);
         
-        // DODATKOWY DEBUG - sprawdź czy komendy rzeczywiście się zarejestrowały
-        registeredCommands.forEach(cmd => {
-            console.log(`✅ Zarejestrowana komenda: ${cmd.name} (permissions: ${cmd.default_member_permissions})`);
+        // WERYFIKACJA - sprawdź czy się zarejestrowały
+        registeredCommands.forEach((cmd, index) => {
+            console.log(`✅ ${index + 1}. ${cmd.name}`);
+            console.log(`   - ID: ${cmd.id}`);
+            console.log(`   - Permissions: ${cmd.default_member_permissions}`);
+            console.log(`   - Guild only: ${cmd.guild_id ? 'TAK' : 'NIE'}`);
         });
+        
+        // DODATKOWA WERYFIKACJA - spróbuj ponownie pobrać komendy
+        console.log('🔍 Weryfikuję czy komendy rzeczywiście się zarejestrowały...');
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        try {
+            const verifyCommands = await rest.get(Routes.applicationGuildCommands(client.user.id, guildId));
+            console.log(`✅ Weryfikacja: znaleziono ${verifyCommands.length} komend na serwerze`);
+            
+            const verifyCommand = verifyCommands.find(cmd => cmd.name === 'verify');
+            if (verifyCommand) {
+                console.log('✅ Komenda verify jest dostępna!');
+                console.log(`   - Permissions: ${verifyCommand.default_member_permissions}`);
+            } else {
+                console.log('❌ Komenda verify NIE została znaleziona!');
+            }
+        } catch (verifyError) {
+            console.error('❌ Błąd weryfikacji komend:', verifyError.message);
+        }
         
     } catch (error) {
         console.error('❌ Błąd rejestracji komend:', error);
-        if (error.code) {
-            console.error('❌ Kod błędu:', error.code);
-        }
-        if (error.message) {
-            console.error('❌ Wiadomość błędu:', error.message);
-        }
+        console.error('❌ Stack trace:', error.stack);
+        
+        // Spróbuj ponownie za 10 sekund
+        console.log('🔄 Próbuję ponownie za 10 sekund...');
+        setTimeout(registerCommands, 10000);
     }
 }
 
@@ -166,12 +198,20 @@ async function registerCommands() {
 client.once('ready', async () => {
     console.log(`✅ Bot ${client.user.tag} jest online!`);
     console.log(`🔗 Zalogowany na ${client.guilds.cache.size} serwer(ach)`);
+    console.log(`🕐 Czas uruchomienia: ${new Date().toISOString()}`);
+    console.log(`🖥️ Środowisko: ${process.env.NODE_ENV || 'development'}`);
+    
+    // Poczekaj 3 sekundy na pełne załadowanie się bota
+    console.log('⏳ Czekam 3 sekundy na pełne załadowanie bota...');
+    await new Promise(resolve => setTimeout(resolve, 3000));
     
     // Rejestruj komendy slash
     await registerCommands();
     
     // Uruchom system codziennych przypomnień
     startDailyReminders();
+    
+    console.log('🚀 Bot w pełni gotowy do pracy!');
 });
 
 // System codziennych przypomnień weryfikacji (o 00:00)
