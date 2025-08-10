@@ -145,12 +145,25 @@ function startDailyReminders() {
     scheduleNextReminder();
 }
 
+// Zabezpieczenie przed podwójnym wykonaniem komend
+const processedInteractions = new Set();
+
 // Obsługa komend slash
 client.on('interactionCreate', async interaction => {
     if (!interaction.isChatInputCommand()) return;
     
     // Zabezpieczenie przed podwójnym wykonaniem
-    if (interaction.replied || interaction.deferred) return;
+    if (processedInteractions.has(interaction.id)) {
+        console.log(`🔍 DEBUG: Interakcja ${interaction.id} już została przetworzona - pomijam`);
+        return;
+    }
+    
+    processedInteractions.add(interaction.id);
+    
+    // Usuń stare interakcje po 5 minutach (cleanup)
+    setTimeout(() => {
+        processedInteractions.delete(interaction.id);
+    }, 5 * 60 * 1000);
 
     if (interaction.commandName === 'test') {
         const subcommand = interaction.options.getSubcommand();
