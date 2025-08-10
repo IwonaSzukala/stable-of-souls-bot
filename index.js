@@ -35,9 +35,9 @@ async function registerCommands() {
         
         console.log('🔄 Rejestrowanie komend slash...');
         
-        // Dla wszystkich serwerów (globalnie)
+        // Dla konkretnego serwera (szybsze)
         await rest.put(
-            Routes.applicationCommands(client.user.id),
+            Routes.applicationGuildCommands(client.user.id, '845651993770721300'),
             { body: commands },
         );
         
@@ -48,9 +48,56 @@ async function registerCommands() {
 }
 
 // Wydarzenie gdy bot się uruchomi
-client.once('ready', () => {
+client.once('ready', async () => {
     console.log(`✅ Bot ${client.user.tag} jest online!`);
     console.log(`🔗 Zalogowany na ${client.guilds.cache.size} serwer(ach)`);
+    
+    // Rejestruj komendy slash
+    await registerCommands();
+});
+
+// Obsługa komend slash
+client.on('interactionCreate', async interaction => {
+    if (!interaction.isChatInputCommand()) return;
+
+    if (interaction.commandName === 'test') {
+        const subcommand = interaction.options.getSubcommand();
+        
+        if (subcommand === 'welcome') {
+            try {
+                // Pobieranie kanału powitalnego
+                const welcomeChannel = interaction.guild.channels.cache.get(config.welcomeChannelId);
+                
+                if (!welcomeChannel) {
+                    await interaction.reply({
+                        content: '❌ Nie znaleziono kanału powitalnego! Sprawdź konfigurację.',
+                        ephemeral: true
+                    });
+                    return;
+                }
+
+                // Przygotowanie testowej wiadomości powitalnej
+                const testWelcomeMessage = config.welcomeMessage.replace('{user}', `<@${interaction.user.id}>`);
+                
+                // Wysłanie testowej wiadomości
+                await welcomeChannel.send(`**[TEST]** ${testWelcomeMessage}`);
+                
+                await interaction.reply({
+                    content: `✅ Wysłano testową wiadomość powitalną na kanał ${welcomeChannel}!`,
+                    ephemeral: true
+                });
+                
+                console.log(`🧪 ${interaction.user.tag} przetestował wiadomość powitalną`);
+                
+            } catch (error) {
+                console.error('❌ Błąd przy testowaniu wiadomości powitalnej:', error);
+                await interaction.reply({
+                    content: '❌ Wystąpił błąd podczas wysyłania testowej wiadomości.',
+                    ephemeral: true
+                });
+            }
+        }
+    }
 });
 
 // Wydarzenie gdy ktoś dołączy na serwer
