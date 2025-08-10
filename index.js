@@ -96,13 +96,12 @@ async function registerCommands() {
         const rest = new REST({ version: '10' }).setToken(config.token);
         
         console.log('🔄 Rejestrowanie komend slash...');
-        console.log('📋 Komendy do rejestracji:', commandsJSON.map(cmd => cmd.name).join(', '));
-        console.log('🔍 Szczegóły komend:', JSON.stringify(commandsJSON.map(cmd => ({name: cmd.name, description: cmd.description})), null, 2));
+        console.log('📋 Komendy do rejestracji:', commands.map(cmd => cmd.name).join(', '));
         
         // Dla konkretnego serwera (szybsze)
         await rest.put(
             Routes.applicationGuildCommands(client.user.id, '845651993770721300'),
-            { body: commandsJSON },
+            { body: commands },
         );
         
         console.log('✅ Komendy slash zarejestrowane!');
@@ -205,42 +204,38 @@ client.on('interactionCreate', async interaction => {
         }
     }
 
-    if (interaction.commandName === 'sos') {
-        const subcommand = interaction.options.getSubcommand();
-        
-        if (subcommand === 'reminder') {
-            try {
-                // Sprawdzenie czy użytkownik ma uprawnienia administratora
-                if (!interaction.member.permissions.has('Administrator')) {
-                    await interaction.reply({
-                        content: '❌ You need Administrator permissions to use this command.',
-                        ephemeral: true
-                    });
-                    return;
-                }
-                
-                // Wysłanie manualnego przypomnienia
-                const success = await sendVerificationReminder(interaction.guild, true);
-                
-                if (success) {
-                    await interaction.reply({
-                        content: '✅ Verification reminder sent successfully!',
-                        ephemeral: true
-                    });
-                } else {
-                    await interaction.reply({
-                        content: '❌ Failed to send verification reminder. Check bot permissions and channel ID.',
-                        ephemeral: true
-                    });
-                }
-                
-            } catch (error) {
-                console.error('❌ Błąd przy wysyłaniu manualnego przypomnienia:', error);
+    if (interaction.commandName === 'reminder') {
+        try {
+            // Sprawdzenie czy użytkownik ma uprawnienia administratora
+            if (!interaction.member.permissions.has('Administrator')) {
                 await interaction.reply({
-                    content: '❌ An error occurred while sending the reminder.',
+                    content: '❌ You need Administrator permissions to use this command.',
+                    ephemeral: true
+                });
+                return;
+            }
+            
+            // Wysłanie manualnego przypomnienia
+            const success = await sendVerificationReminder(interaction.guild, true);
+            
+            if (success) {
+                await interaction.reply({
+                    content: '✅ Verification reminder sent successfully!',
+                    ephemeral: true
+                });
+            } else {
+                await interaction.reply({
+                    content: '❌ Failed to send verification reminder. Check bot permissions and channel ID.',
                     ephemeral: true
                 });
             }
+            
+        } catch (error) {
+            console.error('❌ Błąd przy wysyłaniu manualnego przypomnienia:', error);
+            await interaction.reply({
+                content: '❌ An error occurred while sending the reminder.',
+                ephemeral: true
+            });
         }
     }
 
