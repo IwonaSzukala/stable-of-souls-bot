@@ -1,11 +1,14 @@
-const { Client, GatewayIntentBits, SlashCommandBuilder, REST, Routes } = require('discord.js');
+const { Client, GatewayIntentBits, SlashCommandBuilder, REST, Routes, EmbedBuilder } = require('discord.js');
 require('dotenv').config();
 
 // Konfiguracja bota
 const config = {
     token: process.env.BOT_TOKEN,
     welcomeChannelId: process.env.WELCOME_CHANNEL_ID,
-    welcomeMessage: 'Witamy {user} na serwerze Stable Of Souls! 🌟\n\nMamy nadzieję, że znajdziesz tu wszystko czego szukasz. Miłego pobytu!'
+    welcomeMessage: {
+        title: '🇺🇸 Hello! @Stable Of Souls on the Stable of Souls server! 👋',
+        description: 'We are thrilled to have you join us! To get started, please read the rules ✅ ▶ rules and verify yourself in the right channel to gain full access to the server.'
+    }
 };
 
 // Tworzenie klienta bota
@@ -77,10 +80,20 @@ client.on('interactionCreate', async interaction => {
                 }
 
                 // Przygotowanie testowej wiadomości powitalnej
-                const testWelcomeMessage = config.welcomeMessage.replace('{user}', `<@${interaction.user.id}>`);
+                const welcomeEmbed = new EmbedBuilder()
+                    .setDescription(config.welcomeMessage.title.replace('@Stable Of Souls', `<@${interaction.user.id}>`))
+                    .addFields({
+                        name: '\u200B',
+                        value: config.welcomeMessage.description,
+                        inline: false
+                    })
+                    .setColor('#5865F2'); // Discord blue color
                 
                 // Wysłanie testowej wiadomości
-                await welcomeChannel.send(`**[TEST]** ${testWelcomeMessage}`);
+                await welcomeChannel.send({ 
+                    content: `**[TEST]**`,
+                    embeds: [welcomeEmbed] 
+                });
                 
                 await interaction.reply({
                     content: `✅ Wysłano testową wiadomość powitalną na kanał ${welcomeChannel}!`,
@@ -112,10 +125,17 @@ client.on('guildMemberAdd', async (member) => {
         }
 
         // Przygotowanie wiadomości powitalnej
-        const welcomeText = config.welcomeMessage.replace('{user}', `<@${member.id}>`);
+        const welcomeEmbed = new EmbedBuilder()
+            .setDescription(config.welcomeMessage.title.replace('@Stable Of Souls', `<@${member.id}>`))
+            .addFields({
+                name: '\u200B',
+                value: config.welcomeMessage.description,
+                inline: false
+            })
+            .setColor('#5865F2'); // Discord blue color
         
         // Wysłanie wiadomości powitalnej
-        await welcomeChannel.send(welcomeText);
+        await welcomeChannel.send({ embeds: [welcomeEmbed] });
         
         console.log(`👋 Powitano nowego członka: ${member.user.tag}`);
         
