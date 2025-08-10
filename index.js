@@ -35,7 +35,7 @@ const commands = [
     new SlashCommandBuilder()
         .setName('verify')
         .setDescription('Verify yourself on the server')
-        .setDefaultMemberPermissions('0') // EXPLICIT ZERO = dostępne dla wszystkich
+        // CAŁKOWITE USUNIĘCIE permissions - domyślnie wszyscy mogą używać
         .addStringOption(option =>
             option.setName('sso_name')
                 .setDescription('Your character name from the game (e.g. Luca Wolfblanket)')
@@ -47,7 +47,7 @@ const commands = [
     new SlashCommandBuilder()
         .setName('verify_unverified')
         .setDescription('Verify yourself - only for unverified users')
-        .setDefaultMemberPermissions('0') // Dostępne dla wszystkich, ale sprawdzimy rolę w kodzie
+        // CAŁKOWITE USUNIĘCIE permissions - domyślnie wszyscy mogą używać
         .addStringOption(option =>
             option.setName('sso_name')
                 .setDescription('Your character name from the game (e.g. Luca Wolfblanket)')
@@ -176,13 +176,63 @@ async function registerCommands() {
             const verifyCommand = verifyCommands.find(cmd => cmd.name === 'verify');
             if (verifyCommand) {
                 console.log('✅ Komenda verify jest dostępna!');
+                console.log(`   - ID: ${verifyCommand.id}`);
                 console.log(`   - Permissions: ${verifyCommand.default_member_permissions}`);
+                console.log(`   - Guild ID: ${verifyCommand.guild_id}`);
+                
+                // SPRAWDŹ SZCZEGÓŁY KOMENDY
+                try {
+                    const commandDetails = await rest.get(Routes.applicationGuildCommand(client.user.id, guildId, verifyCommand.id));
+                    console.log('🔍 Szczegóły komendy verify:');
+                    console.log(`   - Name: ${commandDetails.name}`);
+                    console.log(`   - Description: ${commandDetails.description}`);
+                    console.log(`   - Type: ${commandDetails.type}`);
+                    console.log(`   - Default permissions: ${commandDetails.default_member_permissions}`);
+                    console.log(`   - DM permission: ${commandDetails.dm_permission}`);
+                    console.log(`   - NSFW: ${commandDetails.nsfw}`);
+                } catch (detailError) {
+                    console.log('⚠️ Nie można pobrać szczegółów komendy:', detailError.message);
+                }
+                
             } else {
                 console.log('❌ Komenda verify NIE została znaleziona!');
             }
+            
+            // SPRAWDŹ CZY KTÓRAŚ KOMENDA MA PROBLEMY Z PERMISSIONS
+            verifyCommands.forEach(cmd => {
+                console.log(`📋 Komenda: ${cmd.name}`);
+                console.log(`   - Permissions: ${cmd.default_member_permissions}`);
+                console.log(`   - Available to everyone: ${cmd.default_member_permissions === null || cmd.default_member_permissions === '0'}`);
+            });
+            
         } catch (verifyError) {
             console.error('❌ Błąd weryfikacji komend:', verifyError.message);
         }
+        
+        // SPRAWDŹ UPRAWNIENIA DO APPLICATION COMMANDS na serwerze
+        console.log('\n🔍 === SPRAWDZANIE UPRAWNIEŃ APPLICATION COMMANDS ===');
+        try {
+            const guild = client.guilds.cache.get(guildId);
+            if (guild) {
+                const botMember = guild.members.me;
+                const canUseCommands = botMember.permissions.has('UseApplicationCommands');
+                const canManageCommands = botMember.permissions.has('ManageGuild') || botMember.permissions.has('Administrator');
+                
+                console.log(`🤖 Bot może używać slash commands: ${canUseCommands}`);
+                console.log(`🤖 Bot może zarządzać komendami: ${canManageCommands}`);
+                
+                // Sprawdź czy serwer ma ograniczenia slash commands
+                const everyoneRole = guild.roles.everyone;
+                console.log(`👥 @everyone może używać slash commands: ${everyoneRole.permissions.has('UseApplicationCommands')}`);
+                
+                // Sprawdź czy bot ma wyższe uprawnienia niż @everyone
+                console.log(`🎭 Pozycja roli bota: ${botMember.roles.highest.position}`);
+                console.log(`🎭 Pozycja @everyone: ${everyoneRole.position}`);
+            }
+        } catch (permError) {
+            console.log('⚠️ Błąd sprawdzania uprawnień:', permError.message);
+        }
+        console.log('=== KONIEC SPRAWDZANIA UPRAWNIEŃ ===\n');
         
     } catch (error) {
         console.error('❌ Błąd rejestracji komend:', error);
@@ -201,12 +251,89 @@ client.once('ready', async () => {
     console.log(`🕐 Czas uruchomienia: ${new Date().toISOString()}`);
     console.log(`🖥️ Środowisko: ${process.env.NODE_ENV || 'development'}`);
     
+    // SPRAWDŹ UPRAWNIENIA BOTA NA SERWERZE
+    const guild = client.guilds.cache.first();
+    if (guild) {
+        const botMember = guild.members.me;
+        console.log('\n🔍 === SPRAWDZANIE UPRAWNIEŃ BOTA ===');
+        console.log(`🏠 Serwer: ${guild.name} (${guild.id})`);
+        console.log(`🤖 Bot: ${botMember.user.tag} (${botMember.id})`);
+        console.log(`👑 Właściciel serwera: ${guild.ownerId}`);
+        console.log(`🎭 Najwyższa rola bota: ${botMember.roles.highest.name} (pozycja: ${botMember.roles.highest.position})`);
+        console.log(`⚡ Uprawnienia bota:`);
+        
+        const importantPermissions = [
+            'Administrator',
+            'ManageGuild', 
+            'ManageRoles',
+            'ManageNicknames',
+            'SendMessages',
+            'UseApplicationCommands',
+            'ManageMessages'
+        ];
+        
+        importantPermissions.forEach(perm => {
+            const has = botMember.permissions.has(perm);
+            console.log(`   ${has ? '✅' : '❌'} ${perm}: ${has}`);
+        });
+        
+        console.log(`📊 Wszystkie uprawnienia: ${botMember.permissions.toArray().join(', ')}`);
+        console.log('=== KONIEC SPRAWDZANIA UPRAWNIEŃ ===\n');
+        
+        // SPRAWDŹ INTEGRACJE SERWERA
+        try {
+            const integrations = await guild.fetchIntegrations();
+            console.log(`🔗 Integrations na serwerze: ${integrations.size}`);
+            integrations.forEach(integration => {
+                if (integration.application && integration.application.id === client.user.id) {
+                    console.log(`🤖 Znaleziono integrację bota: ${integration.application.name}`);
+                    console.log(`   ID: ${integration.id}`);
+                    console.log(`   Typ: ${integration.type}`);
+                    console.log(`   Enabled: ${integration.enabled}`);
+                }
+            });
+        } catch (intError) {
+            console.log('⚠️ Nie można sprawdzić integrations:', intError.message);
+        }
+    }
+    
     // Poczekaj 3 sekundy na pełne załadowanie się bota
     console.log('⏳ Czekam 3 sekundy na pełne załadowanie bota...');
     await new Promise(resolve => setTimeout(resolve, 3000));
     
     // Rejestruj komendy slash
     await registerCommands();
+    
+    // DODATKOWE SPRAWDZENIE - spróbuj zarejestrować komendy globalnie jako test
+    console.log('\n🌍 === TEST KOMEND GLOBALNYCH ===');
+    try {
+        const rest = new REST({ version: '10' }).setToken(config.token);
+        
+        // Sprawdź obecne komendy globalne
+        const globalCommands = await rest.get(Routes.applicationCommands(client.user.id));
+        console.log(`📊 Obecne komendy globalne: ${globalCommands.length}`);
+        
+        // Zarejestruj TYLKO komendę verify globalnie jako test
+        const testCommand = new SlashCommandBuilder()
+            .setName('verify_global_test')
+            .setDescription('Test global verify command')
+            .addStringOption(option =>
+                option.setName('test')
+                    .setDescription('Test parameter')
+                    .setRequired(true));
+        
+        const globalResult = await rest.post(Routes.applicationCommands(client.user.id), {
+            body: testCommand.toJSON()
+        });
+        
+        console.log(`✅ Zarejestrowano testową komendę globalną: ${globalResult.name}`);
+        console.log(`   ID: ${globalResult.id}`);
+        console.log(`   Permissions: ${globalResult.default_member_permissions}`);
+        
+    } catch (globalError) {
+        console.error('❌ Błąd rejestracji globalnej:', globalError.message);
+    }
+    console.log('=== KONIEC TESTU GLOBALNEGO ===\n');
     
     // Uruchom system codziennych przypomnień
     startDailyReminders();
