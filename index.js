@@ -60,27 +60,7 @@ async function sendVerificationReminder(guild, isManual = false) {
         
         const reminderEmbed = new EmbedBuilder()
             .setColor('#ED4A7B') // Różowy kolor
-            .setTitle('📝 Daily Verification Reminder')
-            .setDescription('**Don\'t forget to verify yourself on the server!**')
-            .addFields(
-                {
-                    name: '🎯 How to verify:',
-                    value: '1. Use the `/verify` command\n2. Enter your **SSO Name** (character name from game)\n3. Enter your **Nickname**\n4. Done! You\'ll get verified roles automatically',
-                    inline: false
-                },
-                {
-                    name: '✨ Example:',
-                    value: '`/verify SSO Name: Luca Wolfblanket Nickname: Kumi`\nResult: `✧ Luca Wolfblanket ✧ Kumi`',
-                    inline: false
-                },
-                {
-                    name: '❓ Need help?',
-                    value: 'Contact server administrators or check the rules channel',
-                    inline: false
-                }
-            )
-            .setFooter({ text: isManual ? 'Stable Of Souls • Manual Reminder' : 'Stable Of Souls • Daily Reminder' })
-            .setTimestamp();
+            .setDescription('<:comet3:1263460501279604766> Daily Verification Reminder\nDon\'t forget to verify yourself on the server!\nUse the `/verify` command');
         
         await channel.send({
             content: `<@&${config.unverifiedRoleId}> 👋`,
