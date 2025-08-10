@@ -73,14 +73,14 @@ async function sendVerificationReminder(guild, isManual = false) {
         
         const reminderEmbed = new EmbedBuilder()
             .setColor('#ED4A7B') // Różowy kolor
-            .setTitle('<:comet3:1263460501279604766> Daily Verification Reminder')
+            .setTitle('<a:9434magentaverification:1245033014514159706> Verification Reminder')
             .setDescription('**Don\'t forget to verify yourself on the server!**')
             .addFields({
-                name: '\u200B',
-                value: '*Use `/verify` command*\n\nExample: `/verify sso_name:Luca Wolfblanket nickname:Kumi`\n\n⚠️ **Note:** Write it exactly as shown in the example image. Where there are spaces, there must be spaces. Where there are no spaces, don\'t add spaces.',
+                name: 'How to verify?',
+                value: '<a:4484pinkarrow:889196250828775445> Use `/verify` command\n\n**Example:** `/verify sso_name:Luca Wolfblanket nickname:Kumi`\n\n⚠️ **Note:** Write it exactly as shown in the example image. Where there are spaces, there must be spaces. Where there are no spaces, don\'t add spaces.',
                 inline: false
             })
-            .setImage('https://cdn.discordapp.com/attachments/1241675864362586192/1404097948043837531/image.png?ex=6899f39d&is=6898a21d&hm=b16be4da67bc6d2d0e07d5d63853da3534e18fe51765d69bc4c3933b279abdbf&')
+            .setImage('https://cdn.discordapp.com/attachments/1241719228319404043/1404163504604446750/image.png?ex=689a30ab&is=6898df2b&hm=d583daebfcc2b81462639efc65af3aa62999826c4b7004e6101aad1208e8d8f7&')
             .setFooter({ text: 'Example' });
         
         console.log(`📤 DEBUG: Wysyłam wiadomość na kanał ${channel.name}...`);
