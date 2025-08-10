@@ -442,5 +442,5 @@ client.on('error', error => {
     console.error('❌ Błąd bota:', error);
 });
 
-// Uruchomienie bota
+// Uruchomienie botaaa
 client.login(config.token);
