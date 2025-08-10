@@ -42,9 +42,9 @@ const commands = [
             option.setName('nickname')
                 .setDescription('Your nickname (e.g. Kumi)')
                 .setRequired(true)),
-    // DODANA BRAKUJĄCA KOMENDA REMINDER
+    // KOMENDA SOS DO WYSYŁANIA PRZYPOMNIEŃ
     new SlashCommandBuilder()
-        .setName('reminder')
+        .setName('sos')
         .setDescription('Send a manual verification reminder (Admin only)')
 ].map(command => command.toJSON());
 
@@ -100,17 +100,18 @@ async function sendVerificationReminder(guild, isManual = false) {
 async function registerCommands() {
     try {
         const rest = new REST({ version: '10' }).setToken(config.token);
+        const guildId = '845651993770721300'; // ID serwera Stable of Souls
         
         console.log('🔄 Rejestrowanie komend slash...');
         console.log('📋 Komendy do rejestracji:', commands.map(cmd => cmd.name).join(', '));
         
-        // GLOBALNIE dla wszystkich serwerów (może zadziałać lepiej)
+        // REJESTRACJA PER SERWER - działa natychmiast (zamiast globalnej)
         await rest.put(
-            Routes.applicationCommands(client.user.id),
+            Routes.applicationGuildCommands(client.user.id, guildId),
             { body: commands },
         );
         
-        console.log('✅ Komendy slash zarejestrowane!');
+        console.log('✅ Komendy slash zarejestrowane dla serwera!');
     } catch (error) {
         console.error('❌ Błąd rejestracji komend:', error);
     }
@@ -210,7 +211,7 @@ client.on('interactionCreate', async interaction => {
         }
     }
 
-    if (interaction.commandName === 'reminder') {
+    if (interaction.commandName === 'sos') {
         try {
             // Sprawdzenie czy użytkownik ma uprawnienia administratora
             if (!interaction.member.permissions.has('Administrator')) {
