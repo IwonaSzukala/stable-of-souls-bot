@@ -156,6 +156,15 @@ client.on('interactionCreate', async interaction => {
             console.log(`👤 Pozycja roli użytkownika: ${member.roles.highest.position}`);
             console.log(`🔄 Bot może zarządzać użytkownikiem: ${member.manageable}`);
             
+            // Sprawdzenie czy użytkownik to właściciel serwera
+            if (member.id === interaction.guild.ownerId) {
+                await interaction.reply({
+                    content: '❌ Nie mogę zmienić nicku właściciela serwera. Zmień nick ręcznie lub użyj konta które nie jest właścicielem serwera.',
+                    ephemeral: true
+                });
+                return;
+            }
+            
             // Sprawdzenie czy bot może zarządzać tym użytkownikiem
             if (!member.manageable) {
                 await interaction.reply({
@@ -167,8 +176,12 @@ client.on('interactionCreate', async interaction => {
             
             // Zmiana nicku
             try {
-                await member.setNickname(newNickname);
-                console.log(`✅ Zmieniono nick na: ${newNickname}`);
+                if (member.id !== interaction.guild.ownerId) {
+                    await member.setNickname(newNickname);
+                    console.log(`✅ Zmieniono nick na: ${newNickname}`);
+                } else {
+                    console.log(`⚠️ Pominięto zmianę nicku - użytkownik to właściciel serwera`);
+                }
             } catch (nickError) {
                 console.log(`❌ Błąd zmiany nicku:`, nickError);
                 await interaction.reply({
