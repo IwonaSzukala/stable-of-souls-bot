@@ -145,17 +145,53 @@ client.on('interactionCreate', async interaction => {
             }
             
             const member = interaction.member;
+            const botMember = interaction.guild.members.me;
+            
+            // DEBUGGING - sprawdzenie uprawnień
+            console.log(`🔍 Debug - Sprawdzanie uprawnień:`);
+            console.log(`🤖 Bot ma uprawnienia Administrator: ${botMember.permissions.has('Administrator')}`);
+            console.log(`🤖 Bot ma uprawnienia ManageRoles: ${botMember.permissions.has('ManageRoles')}`);
+            console.log(`🤖 Bot ma uprawnienia ManageNicknames: ${botMember.permissions.has('ManageNicknames')}`);
+            console.log(`👤 Pozycja roli bota: ${botMember.roles.highest.position}`);
+            console.log(`👤 Pozycja roli użytkownika: ${member.roles.highest.position}`);
+            console.log(`🔄 Bot może zarządzać użytkownikiem: ${member.manageable}`);
+            
+            // Sprawdzenie czy bot może zarządzać tym użytkownikiem
+            if (!member.manageable) {
+                await interaction.reply({
+                    content: '❌ Nie mogę zarządzać Twoimi rolami. Prawdopodobnie masz wyższą rolę niż bot. Skontaktuj się z administratorem.',
+                    ephemeral: true
+                });
+                return;
+            }
             
             // Zmiana nicku
-            await member.setNickname(newNickname);
+            try {
+                await member.setNickname(newNickname);
+                console.log(`✅ Zmieniono nick na: ${newNickname}`);
+            } catch (nickError) {
+                console.log(`❌ Błąd zmiany nicku:`, nickError);
+                await interaction.reply({
+                    content: '❌ Nie mogę zmienić Twojego nicku. Sprawdź uprawnienia bota.',
+                    ephemeral: true
+                });
+                return;
+            }
             
             // Dodawanie ról
             for (const roleId of rolesToAdd) {
                 const role = interaction.guild.roles.cache.get(roleId);
                 if (role) {
+                    console.log(`🔍 Sprawdzanie roli do dodania: ${role.name} (${roleId}), pozycja: ${role.position}`);
+                    console.log(`🔍 Bot może zarządzać tą rolą: ${role.editable}`);
+                    
                     if (!member.roles.cache.has(roleId)) {
-                        await member.roles.add(role);
-                        console.log(`✅ Dodano rolę: ${role.name} (${roleId})`);
+                        try {
+                            await member.roles.add(role);
+                            console.log(`✅ Dodano rolę: ${role.name} (${roleId})`);
+                        } catch (roleError) {
+                            console.log(`❌ Błąd dodawania roli ${role.name}:`, roleError);
+                        }
                     } else {
                         console.log(`⚠️ Użytkownik już ma rolę: ${role.name} (${roleId})`);
                     }
@@ -168,9 +204,16 @@ client.on('interactionCreate', async interaction => {
             for (const roleId of rolesToRemove) {
                 const role = interaction.guild.roles.cache.get(roleId);
                 if (role) {
+                    console.log(`🔍 Sprawdzanie roli do usunięcia: ${role.name} (${roleId}), pozycja: ${role.position}`);
+                    console.log(`🔍 Bot może zarządzać tą rolą: ${role.editable}`);
+                    
                     if (member.roles.cache.has(roleId)) {
-                        await member.roles.remove(role);
-                        console.log(`🗑️ Usunięto rolę: ${role.name} (${roleId})`);
+                        try {
+                            await member.roles.remove(role);
+                            console.log(`🗑️ Usunięto rolę: ${role.name} (${roleId})`);
+                        } catch (roleError) {
+                            console.log(`❌ Błąd usuwania roli ${role.name}:`, roleError);
+                        }
                     } else {
                         console.log(`⚠️ Użytkownik nie ma roli: ${role.name} (${roleId})`);
                     }
