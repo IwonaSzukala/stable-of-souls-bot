@@ -96,6 +96,7 @@ async function registerCommands() {
         const rest = new REST({ version: '10' }).setToken(config.token);
         
         console.log('🔄 Rejestrowanie komend slash...');
+        console.log('📋 Komendy do rejestracji:', commands.map(cmd => cmd.name).join(', '));
         
         // Dla konkretnego serwera (szybsze)
         await rest.put(
