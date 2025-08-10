@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits } = require('discord.js');
+const { Client, GatewayIntentBits, SlashCommandBuilder, REST, Routes } = require('discord.js');
 require('dotenv').config();
 
 // Konfiguracja bota
@@ -15,6 +15,37 @@ const client = new Client({
         GatewayIntentBits.GuildMembers // Potrzebne do wykrywania nowych członków
     ]
 });
+
+// Definicja komendy slash
+const commands = [
+    new SlashCommandBuilder()
+        .setName('test')
+        .setDescription('Komendy testowe')
+        .addSubcommand(subcommand =>
+            subcommand
+                .setName('welcome')
+                .setDescription('Wyślij testową wiadomość powitalną')
+        )
+].map(command => command.toJSON());
+
+// Rejestracja komend slash
+async function registerCommands() {
+    try {
+        const rest = new REST({ version: '10' }).setToken(config.token);
+        
+        console.log('🔄 Rejestrowanie komend slash...');
+        
+        // Dla wszystkich serwerów (globalnie)
+        await rest.put(
+            Routes.applicationCommands(client.user.id),
+            { body: commands },
+        );
+        
+        console.log('✅ Komendy slash zarejestrowane!');
+    } catch (error) {
+        console.error('❌ Błąd rejestracji komend:', error);
+    }
+}
 
 // Wydarzenie gdy bot się uruchomi
 client.once('ready', () => {
