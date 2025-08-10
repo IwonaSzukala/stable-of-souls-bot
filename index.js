@@ -148,6 +148,9 @@ function startDailyReminders() {
 // Obsługa komend slash
 client.on('interactionCreate', async interaction => {
     if (!interaction.isChatInputCommand()) return;
+    
+    // Zabezpieczenie przed podwójnym wykonaniem
+    if (interaction.replied || interaction.deferred) return;
 
     if (interaction.commandName === 'test') {
         const subcommand = interaction.options.getSubcommand();
