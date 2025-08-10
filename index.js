@@ -7,7 +7,7 @@ const config = {
     welcomeChannelId: process.env.WELCOME_CHANNEL_ID,
     welcomeMessage: {
         title: '🇺🇸 Hello! {user} on the Stable of Souls server! 👋',
-        description: 'We are thrilled to have you join us! To get started, please read the rules ✅  <#1241676404605583401> and verify yourself in the right channel to gain full access to the server.'
+        description: 'We are thrilled to have you join us! To get started, please read the rules ✅ ▶ <#1241676404605583401> and verify yourself in the right channel to gain full access to the server.'
     }
 };
 
@@ -28,7 +28,18 @@ const commands = [
             subcommand
                 .setName('welcome')
                 .setDescription('Wyślij testową wiadomość powitalną')
-        )
+        ),
+    new SlashCommandBuilder()
+        .setName('verify')
+        .setDescription('Zweryfikuj się na serwerze')
+        .addStringOption(option =>
+            option.setName('sso_name')
+                .setDescription('Imię postaci z gry (np. Luca Wolfblanket)')
+                .setRequired(true))
+        .addStringOption(option =>
+            option.setName('server_nickname')
+                .setDescription('Twój pseudonim (np. Kumi)')
+                .setRequired(true))
 ].map(command => command.toJSON());
 
 // Rejestracja komend slash
@@ -108,6 +119,101 @@ client.on('interactionCreate', async interaction => {
                     ephemeral: true
                 });
             }
+        }
+    }
+
+    if (interaction.commandName === 'verify') {
+        try {
+            const ssoName = interaction.options.getString('sso_name');
+            const serverNickname = interaction.options.getString('server_nickname');
+            
+            // Tworzenie nowego nicku w formacie ✧ SSO Name ✧ Server Nickname
+            const newNickname = `✧ ${ssoName} ✧ ${serverNickname}`;
+            
+            // ID ról do dodania i usunięcia
+            const rolesToAdd = ['1241706227051008061', '1105549622056861898'];
+            const rolesToRemove = ['1245065409040748644', '1245417870029230181'];
+            const changeNickChannelId = '1274412232855257118';
+            
+            // Sprawdzenie czy nick nie jest za długi (maksymalnie 32 znaki)
+            if (newNickname.length > 32) {
+                await interaction.reply({
+                    content: '❌ Nick jest za długi! Maksymalnie 32 znaki. Spróbuj skrócić imię postaci lub pseudonim.',
+                    ephemeral: true
+                });
+                return;
+            }
+            
+            const member = interaction.member;
+            
+            // Zmiana nicku
+            await member.setNickname(newNickname);
+            
+            // Dodawanie ról
+            for (const roleId of rolesToAdd) {
+                const role = interaction.guild.roles.cache.get(roleId);
+                if (role && !member.roles.cache.has(roleId)) {
+                    await member.roles.add(role);
+                }
+            }
+            
+            // Usuwanie ról
+            for (const roleId of rolesToRemove) {
+                const role = interaction.guild.roles.cache.get(roleId);
+                if (role && member.roles.cache.has(roleId)) {
+                    await member.roles.remove(role);
+                }
+            }
+            
+            // Wiadomość o pomyślnej weryfikacji
+            const verificationEmbed = new EmbedBuilder()
+                .setColor('#00FF00') // Zielony kolor dla sukcesu
+                .setTitle('✅ Weryfikacja zakończona pomyślnie!')
+                .setDescription(`**Zweryfikowano jako:** ${newNickname}`)
+                .addFields({
+                    name: '📝 Potrzebujesz zmiany nicku?',
+                    value: `Napisz na kanał <#${changeNickChannelId}>`,
+                    inline: false
+                })
+                .setTimestamp();
+            
+            await interaction.reply({
+                embeds: [verificationEmbed],
+                ephemeral: true
+            });
+            
+            // Usuwanie wiadomości użytkownika (jeśli to możliwe)
+            try {
+                if (interaction.channel && interaction.channel.permissionsFor(interaction.guild.members.me).has('ManageMessages')) {
+                    // Dla slash commands nie ma co usuwać, bo nie ma wiadomości użytkownika
+                    // Ale możemy usunąć odpowiedź bota po czasie
+                    setTimeout(async () => {
+                        try {
+                            await interaction.deleteReply();
+                        } catch (err) {
+                            // Zignoruj błąd jeśli wiadomość już została usunięta
+                        }
+                    }, 10000); // Usuń po 10 sekundach
+                }
+            } catch (error) {
+                // Zignoruj błędy związane z usuwaniem wiadomości
+            }
+            
+            console.log(`✅ ${interaction.user.tag} zweryfikował się jako: ${newNickname}`);
+            
+        } catch (error) {
+            console.error('❌ Błąd przy weryfikacji:', error);
+            
+            let errorMessage = '❌ Wystąpił błąd podczas weryfikacji.';
+            
+            if (error.code === 50013) {
+                errorMessage = '❌ Bot nie ma uprawnień do zmiany Twojego nicku lub ról. Skontaktuj się z administratorem.';
+            }
+            
+            await interaction.reply({
+                content: errorMessage,
+                ephemeral: true
+            });
         }
     }
 });
