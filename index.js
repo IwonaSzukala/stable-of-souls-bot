@@ -14,15 +14,6 @@ const config = {
         console.log(`📢 DEBUG: Użytkownik ${interaction.user.tag} użył komendy /embed`);
         
         try {
-            // Sprawdzenie uprawnień administratora
-            if (!interaction.member.permissions.has('Administrator')) {
-                await interaction.reply({
-                    content: '❌ Potrzebujesz uprawnień administratora do użycia tej komendy.',
-                    ephemeral: true
-                });
-                return;
-            }
-            
             // Stwórz modal z wieloliniowym polem tekstowym
             const modal = new ModalBuilder()
                 .setCustomId('embed_modal')
@@ -101,8 +92,7 @@ const commands = [
         .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
     new SlashCommandBuilder()
         .setName('embed')
-        .setDescription('Wyślij ogłoszenie jako bot (Admin only)')
-        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
+        .setDescription('Wyślij ogłoszenie jako bot')
 ];
 
 // Funkcja wysyłająca przypomnienie weryfikacji
