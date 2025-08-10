@@ -152,16 +152,30 @@ client.on('interactionCreate', async interaction => {
             // Dodawanie ról
             for (const roleId of rolesToAdd) {
                 const role = interaction.guild.roles.cache.get(roleId);
-                if (role && !member.roles.cache.has(roleId)) {
-                    await member.roles.add(role);
+                if (role) {
+                    if (!member.roles.cache.has(roleId)) {
+                        await member.roles.add(role);
+                        console.log(`✅ Dodano rolę: ${role.name} (${roleId})`);
+                    } else {
+                        console.log(`⚠️ Użytkownik już ma rolę: ${role.name} (${roleId})`);
+                    }
+                } else {
+                    console.log(`❌ Nie znaleziono roli o ID: ${roleId}`);
                 }
             }
             
             // Usuwanie ról
             for (const roleId of rolesToRemove) {
                 const role = interaction.guild.roles.cache.get(roleId);
-                if (role && member.roles.cache.has(roleId)) {
-                    await member.roles.remove(role);
+                if (role) {
+                    if (member.roles.cache.has(roleId)) {
+                        await member.roles.remove(role);
+                        console.log(`🗑️ Usunięto rolę: ${role.name} (${roleId})`);
+                    } else {
+                        console.log(`⚠️ Użytkownik nie ma roli: ${role.name} (${roleId})`);
+                    }
+                } else {
+                    console.log(`❌ Nie znaleziono roli do usunięcia o ID: ${roleId}`);
                 }
             }
             
@@ -200,6 +214,9 @@ client.on('interactionCreate', async interaction => {
             }
             
             console.log(`✅ ${interaction.user.tag} zweryfikował się jako: ${newNickname}`);
+            console.log(`🔍 Debug - Role do dodania: ${rolesToAdd.join(', ')}`);
+            console.log(`🔍 Debug - Role do usunięcia: ${rolesToRemove.join(', ')}`);
+            console.log(`🔍 Debug - Wszystkie role na serwerze:`, interaction.guild.roles.cache.map(r => `${r.name} (${r.id})`).join(', '));
             
         } catch (error) {
             console.error('❌ Błąd przy weryfikacji:', error);
