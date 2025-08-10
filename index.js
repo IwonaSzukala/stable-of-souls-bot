@@ -1,3 +1,53 @@
+const { Client, GatewayIntentBits, SlashCommandBuilder, REST, Routes, EmbedBuilder } = require('discord.js');
+require('dotenv').config();
+
+// Konfiguracja bota
+const config = {
+    token: process.env.BOT_TOKEN,
+    welcomeChannelId: process.env.WELCOME_CHANNEL_ID,
+    reminderChannelId: process.env.REMINDER_CHANNEL_ID || '1241675864362586192', // Fallback na hardcoded ID
+    unverifiedRoleId: process.env.UNVERIFIED_ROLE_ID || '1245065409040748644', // Fallback na hardcoded ID
+    welcomeMessage: {
+        title: '🇺🇸 Hello! {user} on the Stable of Souls server! 👋',
+        description: 'We are thrilled to have you join us! To get started, please read the rules ✅ ▶ <#1241676404605583401> and verify yourself in the right channel to gain full access to the server.'
+    }
+};
+
+// Tworzenie klienta bota
+const client = new Client({
+    intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMembers // Potrzebne do wykrywania nowych członków
+    ]
+});
+
+// Definicja komendy slash - POPRAWIONA WERSJA
+const commands = [
+    new SlashCommandBuilder()
+        .setName('test')
+        .setDescription('Komendy testowe')
+        .addSubcommand(subcommand =>
+            subcommand
+                .setName('welcome')
+                .setDescription('Wyślij testową wiadomość powitalną')
+        ),
+    new SlashCommandBuilder()
+        .setName('verify')
+        .setDescription('Verify yourself on the server')
+        .addStringOption(option =>
+            option.setName('sso_name')
+                .setDescription('Your character name from the game (e.g. Luca Wolfblanket)')
+                .setRequired(true))
+        .addStringOption(option =>
+            option.setName('nickname')
+                .setDescription('Your nickname (e.g. Kumi)')
+                .setRequired(true)),
+    // DODANA BRAKUJĄCA KOMENDA REMINDER
+    new SlashCommandBuilder()
+        .setName('reminder')
+        .setDescription('Send a manual verification reminder (Admin only)')
+].map(command => command.toJSON());
+
 // Funkcja wysyłająca przypomnienie weryfikacji
 async function sendVerificationReminder(guild, isManual = false) {
     try {
@@ -44,51 +94,7 @@ async function sendVerificationReminder(guild, isManual = false) {
         console.error('❌ Błąd wysyłania przypomnienia weryfikacji:', error);
         return false;
     }
-}const { Client, GatewayIntentBits, SlashCommandBuilder, REST, Routes, EmbedBuilder } = require('discord.js');
-require('dotenv').config();
-
-// Konfiguracja bota
-const config = {
-    token: process.env.BOT_TOKEN,
-    welcomeChannelId: process.env.WELCOME_CHANNEL_ID,
-    reminderChannelId: process.env.REMINDER_CHANNEL_ID || '1241675864362586192', // Fallback na hardcoded ID
-    unverifiedRoleId: process.env.UNVERIFIED_ROLE_ID || '1245065409040748644', // Fallback na hardcoded ID
-    welcomeMessage: {
-        title: '🇺🇸 Hello! {user} on the Stable of Souls server! 👋',
-        description: 'We are thrilled to have you join us! To get started, please read the rules ✅ ▶ <#1241676404605583401> and verify yourself in the right channel to gain full access to the server.'
-    }
-};
-
-// Tworzenie klienta bota
-const client = new Client({
-    intents: [
-        GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMembers // Potrzebne do wykrywania nowych członków
-    ]
-});
-
-// Definicja komendy slash
-const commands = [
-    new SlashCommandBuilder()
-        .setName('test')
-        .setDescription('Komendy testowe')
-        .addSubcommand(subcommand =>
-            subcommand
-                .setName('welcome')
-                .setDescription('Wyślij testową wiadomość powitalną')
-        ),
-    new SlashCommandBuilder()
-        .setName('verify')
-        .setDescription('Verify yourself on the server')
-        .addStringOption(option =>
-            option.setName('sso_name')
-                .setDescription('Your character name from the game (e.g. Luca Wolfblanket)')
-                .setRequired(true))
-        .addStringOption(option =>
-            option.setName('nickname')
-                .setDescription('Your nickname (e.g. Kumi)')
-                .setRequired(true))
-].map(command => command.toJSON());
+}
 
 // Rejestracja komend slash
 async function registerCommands() {
