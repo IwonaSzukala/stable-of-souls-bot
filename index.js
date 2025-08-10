@@ -1,13 +1,10 @@
 // Funkcja wysyłająca przypomnienie weryfikacji
 async function sendVerificationReminder(guild, isManual = false) {
-    const reminderChannelId = '1241675864362586192';
-    const unverifiedRoleId = '1245065409040748644';
-    
     try {
-        const channel = guild.channels.cache.get(reminderChannelId);
+        const channel = guild.channels.cache.get(config.reminderChannelId);
         
         if (!channel) {
-            console.log('❌ Nie znaleziono kanału przypomnień weryfikacji');
+            console.log(`❌ Nie znaleziono kanału przypomnień weryfikacji (ID: ${config.reminderChannelId})`);
             return false;
         }
         
@@ -36,11 +33,11 @@ async function sendVerificationReminder(guild, isManual = false) {
             .setTimestamp();
         
         await channel.send({
-            content: `<@&${unverifiedRoleId}> 👋`,
+            content: `<@&${config.unverifiedRoleId}> 👋`,
             embeds: [reminderEmbed]
         });
         
-        console.log(`📨 Wysłano ${isManual ? 'manualne' : 'automatyczne'} przypomnienie o weryfikacji`);
+        console.log(`📨 Wysłano ${isManual ? 'manualne' : 'automatyczne'} przypomnienie o weryfikacji do kanału ${channel.name}`);
         return true;
         
     } catch (error) {
@@ -54,6 +51,8 @@ require('dotenv').config();
 const config = {
     token: process.env.BOT_TOKEN,
     welcomeChannelId: process.env.WELCOME_CHANNEL_ID,
+    reminderChannelId: process.env.REMINDER_CHANNEL_ID || '1241675864362586192', // Fallback na hardcoded ID
+    unverifiedRoleId: process.env.UNVERIFIED_ROLE_ID || '1245065409040748644', // Fallback na hardcoded ID
     welcomeMessage: {
         title: '🇺🇸 Hello! {user} on the Stable of Souls server! 👋',
         description: 'We are thrilled to have you join us! To get started, please read the rules ✅ ▶ <#1241676404605583401> and verify yourself in the right channel to gain full access to the server.'
@@ -204,38 +203,42 @@ client.on('interactionCreate', async interaction => {
         }
     }
 
-    if (interaction.commandName === 'verify_reminder') {
-        try {
-            // Sprawdzenie czy użytkownik ma uprawnienia administratora
-            if (!interaction.member.permissions.has('Administrator')) {
+    if (interaction.commandName === 'sos') {
+        const subcommand = interaction.options.getSubcommand();
+        
+        if (subcommand === 'reminder') {
+            try {
+                // Sprawdzenie czy użytkownik ma uprawnienia administratora
+                if (!interaction.member.permissions.has('Administrator')) {
+                    await interaction.reply({
+                        content: '❌ You need Administrator permissions to use this command.',
+                        ephemeral: true
+                    });
+                    return;
+                }
+                
+                // Wysłanie manualnego przypomnienia
+                const success = await sendVerificationReminder(interaction.guild, true);
+                
+                if (success) {
+                    await interaction.reply({
+                        content: '✅ Verification reminder sent successfully!',
+                        ephemeral: true
+                    });
+                } else {
+                    await interaction.reply({
+                        content: '❌ Failed to send verification reminder. Check bot permissions and channel ID.',
+                        ephemeral: true
+                    });
+                }
+                
+            } catch (error) {
+                console.error('❌ Błąd przy wysyłaniu manualnego przypomnienia:', error);
                 await interaction.reply({
-                    content: '❌ You need Administrator permissions to use this command.',
+                    content: '❌ An error occurred while sending the reminder.',
                     ephemeral: true
                 });
-                return;
             }
-            
-            // Wysłanie manualnego przypomnienia
-            const success = await sendVerificationReminder(interaction.guild, true);
-            
-            if (success) {
-                await interaction.reply({
-                    content: '✅ Verification reminder sent successfully!',
-                    ephemeral: true
-                });
-            } else {
-                await interaction.reply({
-                    content: '❌ Failed to send verification reminder. Check bot permissions.',
-                    ephemeral: true
-                });
-            }
-            
-        } catch (error) {
-            console.error('❌ Błąd przy wysyłaniu manualnego przypomnienia:', error);
-            await interaction.reply({
-                content: '❌ An error occurred while sending the reminder.',
-                ephemeral: true
-            });
         }
     }
 
