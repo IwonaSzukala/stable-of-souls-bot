@@ -26,7 +26,7 @@ const commands = [
     new SlashCommandBuilder()
         .setName('test')
         .setDescription('Komendy testowe')
-        .setDefaultMemberPermissions(null) // Dostępne dla wszystkich
+        .setDefaultMemberPermissions('0x8') // Tylko administratorzy
         .addSubcommand(subcommand =>
             subcommand
                 .setName('welcome')
@@ -48,7 +48,7 @@ const commands = [
     new SlashCommandBuilder()
         .setName('sos')
         .setDescription('Send a manual verification reminder (Admin only)')
-        .setDefaultMemberPermissions('0x8') // Tylko administratorzy (0x8 = Administrator)
+        .setDefaultMemberPermissions(0x8) // Tylko administratorzy (bez cudzysłowów)
 ].map(command => command.toJSON());
 
 // Funkcja wysyłająca przypomnienie weryfikacji
