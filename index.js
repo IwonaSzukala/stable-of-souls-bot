@@ -204,7 +204,7 @@ client.on('interactionCreate', async interaction => {
         }
     }
 
-    if (interaction.commandName === 'reminder') {
+    if (interaction.commandName === 'verify_reminder') {
         try {
             // Sprawdzenie czy użytkownik ma uprawnienia administratora
             if (!interaction.member.permissions.has('Administrator')) {
