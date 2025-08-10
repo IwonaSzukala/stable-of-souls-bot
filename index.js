@@ -50,6 +50,8 @@ const commands = [
 
 // Funkcja wysyłająca przypomnienie weryfikacji
 async function sendVerificationReminder(guild, isManual = false) {
+    console.log(`🔍 DEBUG: sendVerificationReminder wywołana, isManual: ${isManual}, guild: ${guild.name}`);
+    
     try {
         const channel = guild.channels.cache.get(config.reminderChannelId);
         
@@ -57,6 +59,8 @@ async function sendVerificationReminder(guild, isManual = false) {
             console.log(`❌ Nie znaleziono kanału przypomnień weryfikacji (ID: ${config.reminderChannelId})`);
             return false;
         }
+        
+        console.log(`📝 DEBUG: Tworzę embed...`);
         
         const reminderEmbed = new EmbedBuilder()
             .setColor('#ED4A7B') // Różowy kolor
@@ -67,6 +71,8 @@ async function sendVerificationReminder(guild, isManual = false) {
                 value: '*Use `/verify` command*\n\nExample: `/verify sso_name:Luca Wolfblanket nickname:Kumi`',
                 inline: false
             });
+        
+        console.log(`📤 DEBUG: Wysyłam wiadomość na kanał ${channel.name}...`);
         
         await channel.send({
             content: `<@&${config.unverifiedRoleId}> 👋`,
@@ -221,9 +227,13 @@ client.on('interactionCreate', async interaction => {
     }
 
     if (interaction.commandName === 'sos') {
+        console.log(`🎯 DEBUG: Użytkownik ${interaction.user.tag} użył komendy /sos`);
+        console.log(`🎯 DEBUG: Interaction ID: ${interaction.id}`);
+        
         try {
             // Sprawdzenie czy użytkownik ma uprawnienia administratora
             if (!interaction.member.permissions.has('Administrator')) {
+                console.log(`❌ DEBUG: Brak uprawnień dla ${interaction.user.tag}`);
                 await interaction.reply({
                     content: '❌ You need Administrator permissions to use this command.',
                     ephemeral: true
@@ -231,14 +241,20 @@ client.on('interactionCreate', async interaction => {
                 return;
             }
             
+            console.log(`📤 DEBUG: Wysyłam przypomnienie...`);
+            
             // Wysłanie manualnego przypomnienia
             const success = await sendVerificationReminder(interaction.guild, true);
             
+            console.log(`📥 DEBUG: Przypomnienie wysłane, sukces: ${success}`);
+            
             if (success) {
+                console.log(`✅ DEBUG: Odpowiadam na interakcję...`);
                 await interaction.reply({
                     content: '✅ Verification reminder sent successfully!',
                     ephemeral: true
                 });
+                console.log(`✅ DEBUG: Odpowiedziałem na interakcję`);
             } else {
                 await interaction.reply({
                     content: '❌ Failed to send verification reminder. Check bot permissions and channel ID.',
@@ -248,10 +264,14 @@ client.on('interactionCreate', async interaction => {
             
         } catch (error) {
             console.error('❌ Błąd przy wysyłaniu manualnego przypomnienia:', error);
-            await interaction.reply({
-                content: '❌ An error occurred while sending the reminder.',
-                ephemeral: true
-            });
+            
+            // Sprawdź czy już nie odpowiedział
+            if (!interaction.replied && !interaction.deferred) {
+                await interaction.reply({
+                    content: '❌ An error occurred while sending the reminder.',
+                    ephemeral: true
+                });
+            }
         }
     }
 
