@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, SlashCommandBuilder, REST, Routes, EmbedBuilder, PermissionFlagsBits, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder } = require('discord.js');
+const { Client, GatewayIntentBits, SlashCommandBuilder, REST, Routes, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
 require('dotenv').config();
 
 // Konfiguracja bota
@@ -89,10 +89,7 @@ const commands = [
     new SlashCommandBuilder()
         .setName('sos')
         .setDescription('Send a manual verification reminder (Admin only)')
-        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
-    new SlashCommandBuilder()
-        .setName('wiadomosc')
-        .setDescription('Wyślij ogłoszenie jako bot')
+        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
 ];
 
 // Funkcja wysyłająca przypomnienie weryfikacji
