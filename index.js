@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, SlashCommandBuilder, REST, Routes, EmbedBuilder } = require('discord.js');
+const { Client, GatewayIntentBits, SlashCommandBuilder, REST, Routes, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
 require('dotenv').config();
 
 // Konfiguracja bota
@@ -26,7 +26,7 @@ const commands = [
     new SlashCommandBuilder()
         .setName('test')
         .setDescription('Komendy testowe')
-        .setDefaultMemberPermissions('0x8') // Tylko administratorzy
+        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator) // Tylko administratorzy
         .addSubcommand(subcommand =>
             subcommand
                 .setName('welcome')
@@ -48,7 +48,7 @@ const commands = [
     new SlashCommandBuilder()
         .setName('sos')
         .setDescription('Send a manual verification reminder (Admin only)')
-        .setDefaultMemberPermissions(0x8) // Tylko administratorzy (bez cudzysłowów)
+        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator) // Tylko administratorzy
 ].map(command => command.toJSON());
 
 // Funkcja wysyłająca przypomnienie weryfikacji
