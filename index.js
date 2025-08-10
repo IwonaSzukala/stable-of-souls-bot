@@ -35,7 +35,7 @@ const commands = [
     new SlashCommandBuilder()
         .setName('verify')
         .setDescription('Verify yourself on the server (Available to everyone)')
-        .setDefaultMemberPermissions(null) // Dostępne dla wszystkich
+        // USUNIĘTO setDefaultMemberPermissions - teraz dostępne dla wszystkich
         .addStringOption(option =>
             option.setName('sso_name')
                 .setDescription('Your character name from the game (e.g. Luca Wolfblanket)')
@@ -163,14 +163,37 @@ function startDailyReminders() {
     scheduleNextReminder();
 }
 
-// Zabezpieczenie przed podwójnym wykonaniem komend
+// Zabezpieczenie przed podwójnym wykonaniem komend - ULEPSZONE
 const processedInteractions = new Set();
+const sosCommandCooldown = new Set(); // Specjalny cooldown dla komendy SOS
 
 // Obsługa komend slash
 client.on('interactionCreate', async interaction => {
     if (!interaction.isChatInputCommand()) return;
     
-    // Zabezpieczenie przed podwójnym wykonaniem
+    // Specjalne zabezpieczenie dla komendy SOS
+    if (interaction.commandName === 'sos') {
+        const cooldownKey = `${interaction.user.id}-sos`;
+        
+        if (sosCommandCooldown.has(cooldownKey)) {
+            console.log(`🔍 DEBUG: Komenda SOS w cooldown dla ${interaction.user.tag} - pomijam`);
+            if (!interaction.replied && !interaction.deferred) {
+                await interaction.reply({
+                    content: '⏰ Please wait a moment before using this command again.',
+                    ephemeral: true
+                });
+            }
+            return;
+        }
+        
+        // Dodaj do cooldown na 5 sekund
+        sosCommandCooldown.add(cooldownKey);
+        setTimeout(() => {
+            sosCommandCooldown.delete(cooldownKey);
+        }, 5000);
+    }
+    
+    // Standardowe zabezpieczenie przed podwójnym wykonaniem
     if (processedInteractions.has(interaction.id)) {
         console.log(`🔍 DEBUG: Interakcja ${interaction.id} już została przetworzona - pomijam`);
         return;
@@ -235,12 +258,6 @@ client.on('interactionCreate', async interaction => {
         console.log(`🎯 DEBUG: Użytkownik ${interaction.user.tag} użył komendy /sos`);
         console.log(`🎯 DEBUG: Interaction ID: ${interaction.id}`);
         
-        // WCZEŚNIEJSZE sprawdzenie czy już odpowiedział
-        if (interaction.replied || interaction.deferred) {
-            console.log(`⚠️ DEBUG: Interakcja już została przetworzona - pomijam`);
-            return;
-        }
-        
         try {
             // Sprawdzenie czy użytkownik ma uprawnienia administratora
             if (!interaction.member.permissions.has('Administrator')) {
@@ -254,28 +271,27 @@ client.on('interactionCreate', async interaction => {
             
             console.log(`📤 DEBUG: Wysyłam przypomnienie...`);
             
+            // Natychmiastowa odpowiedź, żeby uniknąć timeoutu
+            await interaction.reply({
+                content: '🔄 Sending verification reminder...',
+                ephemeral: true
+            });
+            
             // Wysłanie manualnego przypomnienia
             const success = await sendVerificationReminder(interaction.guild, true);
             
             console.log(`📥 DEBUG: Przypomnienie wysłane, sukces: ${success}`);
             
-            // Sprawdź ponownie przed odpowiedzią
-            if (interaction.replied || interaction.deferred) {
-                console.log(`⚠️ DEBUG: Interakcja została przetworzona podczas wysyłania - pomijam odpowiedź`);
-                return;
-            }
-            
+            // Edytowanie odpowiedzi z wynikiem
             if (success) {
-                console.log(`✅ DEBUG: Odpowiadam na interakcję...`);
-                await interaction.reply({
-                    content: '✅ Verification reminder sent successfully!',
-                    ephemeral: true
+                console.log(`✅ DEBUG: Edytuję odpowiedź na sukces...`);
+                await interaction.editReply({
+                    content: '✅ Verification reminder sent successfully!'
                 });
-                console.log(`✅ DEBUG: Odpowiedziałem na interakcję`);
+                console.log(`✅ DEBUG: Wyedytowałem odpowiedź`);
             } else {
-                await interaction.reply({
-                    content: '❌ Failed to send verification reminder. Check bot permissions and channel ID.',
-                    ephemeral: true
+                await interaction.editReply({
+                    content: '❌ Failed to send verification reminder. Check bot permissions and channel ID.'
                 });
             }
             
@@ -291,6 +307,14 @@ client.on('interactionCreate', async interaction => {
                     });
                 } catch (replyError) {
                     console.error('❌ Błąd przy odpowiedzi:', replyError);
+                }
+            } else {
+                try {
+                    await interaction.editReply({
+                        content: '❌ An error occurred while sending the reminder.'
+                    });
+                } catch (editError) {
+                    console.error('❌ Błąd przy edycji odpowiedzi:', editError);
                 }
             }
         }
