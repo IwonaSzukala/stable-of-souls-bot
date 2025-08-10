@@ -98,9 +98,9 @@ async function registerCommands() {
         console.log('🔄 Rejestrowanie komend slash...');
         console.log('📋 Komendy do rejestracji:', commands.map(cmd => cmd.name).join(', '));
         
-        // Dla konkretnego serwera (szybsze)
+        // GLOBALNIE dla wszystkich serwerów (może zadziałać lepiej)
         await rest.put(
-            Routes.applicationGuildCommands(client.user.id, '845651993770721300'),
+            Routes.applicationCommands(client.user.id),
             { body: commands },
         );
         
