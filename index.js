@@ -21,47 +21,41 @@ const client = new Client({
     ]
 });
 
-// Definicja komendy slash - POPRAWIONA WERSJA Z DEBUGIEM
+// Definicja komendy slash - UPROSZCZONE
 const commands = [
     new SlashCommandBuilder()
         .setName('test')
         .setDescription('Komendy testowe')
-        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator) // Tylko administratorzy
+        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
         .addSubcommand(subcommand =>
             subcommand
                 .setName('welcome')
                 .setDescription('Wyślij testową wiadomość powitalną')
         ),
-    new SlashCommandBuilder()
-        .setName('verify')
-        .setDescription('Verify yourself on the server')
-        // CAŁKOWITE USUNIĘCIE permissions - domyślnie wszyscy mogą używać
-        .addStringOption(option =>
-            option.setName('sso_name')
-                .setDescription('Your character name from the game (e.g. Luca Wolfblanket)')
-                .setRequired(true))
-        .addStringOption(option =>
-            option.setName('nickname')
-                .setDescription('Your nickname (e.g. Kumi)')
-                .setRequired(true)),
-    new SlashCommandBuilder()
-        .setName('verify_unverified')
-        .setDescription('Verify yourself - only for unverified users')
-        // CAŁKOWITE USUNIĘCIE permissions - domyślnie wszyscy mogą używać
-        .addStringOption(option =>
-            option.setName('sso_name')
-                .setDescription('Your character name from the game (e.g. Luca Wolfblanket)')
-                .setRequired(true))
-        .addStringOption(option =>
-            option.setName('nickname')
-                .setDescription('Your nickname (e.g. Kumi)')
-                .setRequired(true)),
-    // KOMENDA SOS DO WYSYŁANIA PRZYPOMNIEŃ
+    // KOMENDA VERIFY - BEZ ŻADNYCH PERMISSIONS
+    {
+        name: 'verify',
+        description: 'Verify yourself on the server',
+        options: [
+            {
+                name: 'sso_name',
+                description: 'Your character name from the game (e.g. Luca Wolfblanket)',
+                type: 3, // STRING
+                required: true
+            },
+            {
+                name: 'nickname', 
+                description: 'Your nickname (e.g. Kumi)',
+                type: 3, // STRING
+                required: true
+            }
+        ]
+    },
     new SlashCommandBuilder()
         .setName('sos')
         .setDescription('Send a manual verification reminder (Admin only)')
-        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator) // Tylko administratorzy
-].map(command => command.toJSON());
+        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
+];
 
 // Funkcja wysyłająca przypomnienie weryfikacji
 async function sendVerificationReminder(guild, isManual = false) {
@@ -127,7 +121,7 @@ async function registerCommands() {
             console.log('⚠️ Nie można sprawdzić obecnych komend:', checkError.message);
         }
         
-        // USUŃ WSZYSTKIE KOMENDY (globalne i serwer)
+        // WYCZYŚĆ WSZYSTKIE STARE KOMENDY (globalne i serwer)
         console.log('🧹 Usuwam wszystkie komendy globalne...');
         await rest.put(Routes.applicationCommands(client.user.id), { body: [] });
         
@@ -303,37 +297,6 @@ client.once('ready', async () => {
     
     // Rejestruj komendy slash
     await registerCommands();
-    
-    // DODATKOWE SPRAWDZENIE - spróbuj zarejestrować komendy globalnie jako test
-    console.log('\n🌍 === TEST KOMEND GLOBALNYCH ===');
-    try {
-        const rest = new REST({ version: '10' }).setToken(config.token);
-        
-        // Sprawdź obecne komendy globalne
-        const globalCommands = await rest.get(Routes.applicationCommands(client.user.id));
-        console.log(`📊 Obecne komendy globalne: ${globalCommands.length}`);
-        
-        // Zarejestruj TYLKO komendę verify globalnie jako test
-        const testCommand = new SlashCommandBuilder()
-            .setName('verify_global_test')
-            .setDescription('Test global verify command')
-            .addStringOption(option =>
-                option.setName('test')
-                    .setDescription('Test parameter')
-                    .setRequired(true));
-        
-        const globalResult = await rest.post(Routes.applicationCommands(client.user.id), {
-            body: testCommand.toJSON()
-        });
-        
-        console.log(`✅ Zarejestrowano testową komendę globalną: ${globalResult.name}`);
-        console.log(`   ID: ${globalResult.id}`);
-        console.log(`   Permissions: ${globalResult.default_member_permissions}`);
-        
-    } catch (globalError) {
-        console.error('❌ Błąd rejestracji globalnej:', globalError.message);
-    }
-    console.log('=== KONIEC TESTU GLOBALNEGO ===\n');
     
     // Uruchom system codziennych przypomnień
     startDailyReminders();
@@ -534,24 +497,10 @@ client.on('interactionCreate', async interaction => {
         }
     }
 
-    if (interaction.commandName === 'verify' || interaction.commandName === 'verify_unverified') {
+    if (interaction.commandName === 'verify') {
         console.log(`🎯 DEBUG: Użytkownik ${interaction.user.tag} użył komendy /${interaction.commandName}`);
         console.log(`🎯 DEBUG: Czy to admin: ${interaction.member.permissions.has('Administrator')}`);
         console.log(`🎯 DEBUG: Role użytkownika:`, interaction.member.roles.cache.map(r => `${r.name} (${r.id})`).join(', '));
-        
-        // SPRAWDZENIE CZY UŻYTKOWNIK MA ROLĘ UNVERIFIED (tylko dla verify_unverified)
-        if (interaction.commandName === 'verify_unverified') {
-            const hasUnverifiedRole = interaction.member.roles.cache.has(config.unverifiedRoleId);
-            console.log(`🔍 DEBUG: Użytkownik ma rolę unverified (${config.unverifiedRoleId}): ${hasUnverifiedRole}`);
-            
-            if (!hasUnverifiedRole) {
-                await interaction.reply({
-                    content: '❌ This command is only available for unverified users. You may already be verified or use the regular `/verify` command.',
-                    ephemeral: true
-                });
-                return;
-            }
-        }
         
         try {
             const ssoName = interaction.options.getString('sso_name');
