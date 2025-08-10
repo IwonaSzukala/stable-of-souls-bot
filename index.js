@@ -26,6 +26,7 @@ const commands = [
     new SlashCommandBuilder()
         .setName('test')
         .setDescription('Komendy testowe')
+        .setDefaultMemberPermissions(null) // Dostępne dla wszystkich
         .addSubcommand(subcommand =>
             subcommand
                 .setName('welcome')
@@ -33,7 +34,8 @@ const commands = [
         ),
     new SlashCommandBuilder()
         .setName('verify')
-        .setDescription('Verify yourself on the server')
+        .setDescription('Verify yourself on the server (Available to everyone)')
+        .setDefaultMemberPermissions(null) // Dostępne dla wszystkich
         .addStringOption(option =>
             option.setName('sso_name')
                 .setDescription('Your character name from the game (e.g. Luca Wolfblanket)')
@@ -46,6 +48,7 @@ const commands = [
     new SlashCommandBuilder()
         .setName('sos')
         .setDescription('Send a manual verification reminder (Admin only)')
+        .setDefaultMemberPermissions('0x8') // Tylko administratorzy (0x8 = Administrator)
 ].map(command => command.toJSON());
 
 // Funkcja wysyłająca przypomnienie weryfikacji
@@ -68,7 +71,7 @@ async function sendVerificationReminder(guild, isManual = false) {
             .setDescription('**Don\'t forget to verify yourself on the server!**')
             .addFields({
                 name: '\u200B',
-                value: '*Use `/verify` command*\n\nExample: `/verify sso_name:Luca Wolfblanket nickname:Kumi`\n\n⚠️ **Note:** Write it exactly as shown in the example message. Where there are spaces, there must be spaces. Where there are no spaces, don\'t add spaces.',
+                value: '*Use `/verify` command*\n\nExample: `/verify sso_name:Luca Wolfblanket nickname:Kumi`\n\n⚠️ **Note:** Write it exactly as shown in the example image. Where there are spaces, there must be spaces. Where there are no spaces, don\'t add spaces.',
                 inline: false
             })
             .setImage('https://cdn.discordapp.com/attachments/1241675864362586192/1404097948043837531/image.png?ex=6899f39d&is=6898a21d&hm=b16be4da67bc6d2d0e07d5d63853da3534e18fe51765d69bc4c3933b279abdbf&')
@@ -294,9 +297,14 @@ client.on('interactionCreate', async interaction => {
     }
 
     if (interaction.commandName === 'verify') {
+        console.log(`🎯 DEBUG: Użytkownik ${interaction.user.tag} użył komendy /verify`);
+        console.log(`🎯 DEBUG: Czy to admin: ${interaction.member.permissions.has('Administrator')}`);
+        
         try {
             const ssoName = interaction.options.getString('sso_name');
             const nickname = interaction.options.getString('nickname');
+            
+            console.log(`📝 DEBUG: SSO Name: ${ssoName}, Nickname: ${nickname}`);
             
             // Tworzenie nowego nicku w formacie ✧ SSO Name ✧ Nickname
             const newNickname = `✧ ${ssoName} ✧ ${nickname}`;
@@ -308,6 +316,7 @@ client.on('interactionCreate', async interaction => {
             
             // Sprawdzenie czy nick nie jest za długi (maksymalnie 32 znaki)
             if (newNickname.length > 32) {
+                console.log(`❌ DEBUG: Nick za długi: ${newNickname.length} znaków`);
                 await interaction.reply({
                     content: '❌ Nickname is too long! Maximum 32 characters. Try shortening your character name or nickname.',
                     ephemeral: true
@@ -318,17 +327,20 @@ client.on('interactionCreate', async interaction => {
             const member = interaction.member;
             const botMember = interaction.guild.members.me;
             
-            // DEBUGGING - sprawdzenie uprawnień
-            console.log(`🔍 Debug - Sprawdzanie uprawnień:`);
+            // DEBUGGING - sprawdzenie uprawnień - DOSTĘPNE DLA WSZYSTKICH
+            console.log(`🔍 Debug - Sprawdzanie uprawnień (dostępne dla wszystkich):`);
             console.log(`🤖 Bot ma uprawnienia Administrator: ${botMember.permissions.has('Administrator')}`);
             console.log(`🤖 Bot ma uprawnienia ManageRoles: ${botMember.permissions.has('ManageRoles')}`);
             console.log(`🤖 Bot ma uprawnienia ManageNicknames: ${botMember.permissions.has('ManageNicknames')}`);
             console.log(`👤 Pozycja roli bota: ${botMember.roles.highest.position}`);
             console.log(`👤 Pozycja roli użytkownika: ${member.roles.highest.position}`);
             console.log(`🔄 Bot może zarządzać użytkownikiem: ${member.manageable}`);
+            console.log(`👤 Użytkownik to admin: ${member.permissions.has('Administrator')}`);
+            console.log(`👤 Użytkownik to owner: ${member.id === interaction.guild.ownerId}`);
             
             // Sprawdzenie czy użytkownik to właściciel serwera
             if (member.id === interaction.guild.ownerId) {
+                console.log(`❌ DEBUG: Nie można zmienić nicku właściciela serwera`);
                 await interaction.reply({
                     content: '❌ Cannot change the server owner\'s nickname. Please change your nickname manually or use an account that is not the server owner.',
                     ephemeral: true
@@ -338,6 +350,7 @@ client.on('interactionCreate', async interaction => {
             
             // Sprawdzenie czy bot może zarządzać tym użytkownikiem
             if (!member.manageable) {
+                console.log(`❌ DEBUG: Bot nie może zarządzać tym użytkownikiem`);
                 await interaction.reply({
                     content: '❌ Cannot manage your roles. You probably have a higher role than the bot. Please contact an administrator.',
                     ephemeral: true
@@ -345,18 +358,34 @@ client.on('interactionCreate', async interaction => {
                 return;
             }
             
+            // Sprawdzenie czy bot ma podstawowe uprawnienia
+            if (!botMember.permissions.has('ManageNicknames')) {
+                console.log(`❌ DEBUG: Bot nie ma uprawnień ManageNicknames`);
+                await interaction.reply({
+                    content: '❌ Bot doesn\'t have permission to change nicknames. Please contact an administrator.',
+                    ephemeral: true
+                });
+                return;
+            }
+            
+            if (!botMember.permissions.has('ManageRoles')) {
+                console.log(`❌ DEBUG: Bot nie ma uprawnień ManageRoles`);
+                await interaction.reply({
+                    content: '❌ Bot doesn\'t have permission to manage roles. Please contact an administrator.',
+                    ephemeral: true
+                });
+                return;
+            }
+            
             // Zmiana nicku
             try {
-                if (member.id !== interaction.guild.ownerId) {
-                    await member.setNickname(newNickname);
-                    console.log(`✅ Zmieniono nick na: ${newNickname}`);
-                } else {
-                    console.log(`⚠️ Pominięto zmianę nicku - użytkownik to właściciel serwera`);
-                }
+                console.log(`🔄 DEBUG: Próbuje zmienić nick na: ${newNickname}`);
+                await member.setNickname(newNickname);
+                console.log(`✅ Zmieniono nick na: ${newNickname}`);
             } catch (nickError) {
                 console.log(`❌ Błąd zmiany nicku:`, nickError);
                 await interaction.reply({
-                    content: '❌ Cannot change your nickname. Please check bot permissions.',
+                    content: '❌ Cannot change your nickname. Please check bot permissions or contact an administrator.',
                     ephemeral: true
                 });
                 return;
@@ -441,21 +470,23 @@ client.on('interactionCreate', async interaction => {
             console.log(`✅ ${interaction.user.tag} zweryfikował się jako: ${newNickname}`);
             console.log(`🔍 Debug - Role do dodania: ${rolesToAdd.join(', ')}`);
             console.log(`🔍 Debug - Role do usunięcia: ${rolesToRemove.join(', ')}`);
-            console.log(`🔍 Debug - Wszystkie role na serwerze:`, interaction.guild.roles.cache.map(r => `${r.name} (${r.id})`).join(', '));
             
         } catch (error) {
             console.error('❌ Błąd przy weryfikacji:', error);
             
-            let errorMessage = '❌ An error occurred during verification.';
+            let errorMessage = '❌ An error occurred during verification. Please contact an administrator.';
             
             if (error.code === 50013) {
                 errorMessage = '❌ Bot does not have permission to change your nickname or roles. Please contact an administrator.';
             }
             
-            await interaction.reply({
-                content: errorMessage,
-                ephemeral: true
-            });
+            // Sprawdź czy już nie odpowiedział
+            if (!interaction.replied && !interaction.deferred) {
+                await interaction.reply({
+                    content: errorMessage,
+                    ephemeral: true
+                });
+            }
         }
     }
 });
